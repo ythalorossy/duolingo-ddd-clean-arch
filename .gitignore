@@ -1,0 +1,21 @@
+# Brainstorm/visual-companion (ephemeral)
+.superpowers/
+
+# .NET build output
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+*.user
+*.suo
+.vs/
+
+# Rider / IDE
+.idea/
+
+# Test results
+[Tt]est[Rr]esults/
+*.trx
+
+# Local config & secrets
+appsettings.*.local.json
+*.env

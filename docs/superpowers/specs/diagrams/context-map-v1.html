@@ -1,0 +1,105 @@
+<h2>Proposed Context Map (v1)</h2>
+<p class="subtitle">Boxes = bounded contexts. Arrows = relationships, labeled with DDD integration patterns. The gold box is our CORE.</p>
+
+<div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:8px;overflow:auto">
+<svg viewBox="0 0 980 640" width="100%" style="font-family:system-ui,sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#555"/>
+    </marker>
+  </defs>
+
+  <!-- Identity (generic, top) -->
+  <rect x="380" y="20" width="220" height="64" rx="8" fill="#eceff1" stroke="#90a4ae"/>
+  <text x="490" y="46" text-anchor="middle" font-size="14" font-weight="700">Identity &amp; Access</text>
+  <text x="490" y="66" text-anchor="middle" font-size="11" fill="#555">generic · accounts, auth, UserId</text>
+
+  <!-- Learning (supporting, left) -->
+  <rect x="40" y="210" width="270" height="120" rx="8" fill="#e3f2fd" stroke="#42a5f5"/>
+  <text x="175" y="236" text-anchor="middle" font-size="14" font-weight="700">Learning</text>
+  <text x="175" y="258" text-anchor="middle" font-size="11" fill="#555">supporting</text>
+  <text x="175" y="280" text-anchor="middle" font-size="11" fill="#333">course catalog · skill tree</text>
+  <text x="175" y="298" text-anchor="middle" font-size="11" fill="#333">lesson/exercise engine · grading</text>
+  <text x="175" y="316" text-anchor="middle" font-size="11" fill="#333">(authoring lives here too?)</text>
+
+  <!-- Progress (supporting, center) -->
+  <rect x="385" y="220" width="210" height="100" rx="8" fill="#e3f2fd" stroke="#42a5f5"/>
+  <text x="490" y="246" text-anchor="middle" font-size="14" font-weight="700">Progress / Mastery</text>
+  <text x="490" y="266" text-anchor="middle" font-size="11" fill="#555">supporting</text>
+  <text x="490" y="288" text-anchor="middle" font-size="11" fill="#333">lessons completed</text>
+  <text x="490" y="306" text-anchor="middle" font-size="11" fill="#333">per-skill mastery</text>
+
+  <!-- Engagement (CORE, right) -->
+  <rect x="670" y="195" width="270" height="150" rx="8" fill="#fff3cd" stroke="#e0a800" stroke-width="2.5"/>
+  <text x="805" y="222" text-anchor="middle" font-size="15" font-weight="800">Engagement ★ CORE</text>
+  <text x="805" y="244" text-anchor="middle" font-size="11" fill="#555">our richest model</text>
+  <text x="805" y="268" text-anchor="middle" font-size="11" fill="#333">XP &amp; levels · daily goal</text>
+  <text x="805" y="286" text-anchor="middle" font-size="11" fill="#333">streaks (+ freeze)</text>
+  <text x="805" y="304" text-anchor="middle" font-size="11" fill="#333">leagues (promote/relegate)</text>
+  <text x="805" y="322" text-anchor="middle" font-size="11" fill="#333">achievements / badges</text>
+
+  <!-- Notifications (generic, bottom center) -->
+  <rect x="385" y="440" width="210" height="64" rx="8" fill="#eceff1" stroke="#90a4ae"/>
+  <text x="490" y="466" text-anchor="middle" font-size="14" font-weight="700">Notifications</text>
+  <text x="490" y="486" text-anchor="middle" font-size="11" fill="#555">generic · push / email</text>
+
+  <!-- Social (generic, bottom right) -->
+  <rect x="670" y="440" width="270" height="64" rx="8" fill="#eceff1" stroke="#90a4ae"/>
+  <text x="805" y="466" text-anchor="middle" font-size="14" font-weight="700">Social</text>
+  <text x="805" y="486" text-anchor="middle" font-size="11" fill="#555">generic · friends / follows</text>
+
+  <!-- Billing (generic, bottom left) -->
+  <rect x="40" y="440" width="270" height="64" rx="8" fill="#eceff1" stroke="#90a4ae"/>
+  <text x="175" y="466" text-anchor="middle" font-size="14" font-weight="700">Billing / "Super"</text>
+  <text x="175" y="486" text-anchor="middle" font-size="11" fill="#555">generic · subscriptions</text>
+
+  <!-- ARROWS -->
+  <!-- Identity -> Engagement (Conformist) -->
+  <line x1="600" y1="60" x2="700" y2="195" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="690" y="120" font-size="10" fill="#444">UserId (Conformist)</text>
+
+  <!-- Identity -> Learning -->
+  <line x1="380" y1="60" x2="220" y2="210" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="250" y="120" font-size="10" fill="#444">UserId (Conformist)</text>
+
+  <!-- Learning -> Progress (events) -->
+  <line x1="310" y1="270" x2="385" y2="270" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="315" y="262" font-size="10" fill="#444">activity events</text>
+
+  <!-- Learning -> Engagement (Published Language / OHS) -->
+  <line x1="310" y1="240" x2="670" y2="240" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="430" y="212" font-size="11" fill="#b8860b" font-weight="700">LessonCompleted event → (Published Language)</text>
+
+  <!-- Engagement -> Notifications -->
+  <line x1="700" y1="345" x2="560" y2="440" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="565" y="400" font-size="10" fill="#444">StreakAtRisk / GoalReminder</text>
+
+  <!-- Engagement <-> Social (Partnership) -->
+  <line x1="805" y1="345" x2="805" y2="440" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="820" y1="440" x2="820" y2="345" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="828" y="395" font-size="10" fill="#444">leaderboards (Partnership)</text>
+
+  <!-- Billing -> gates features (dashed) -->
+  <line x1="175" y1="440" x2="175" y2="330" stroke="#999" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+  <text x="60" y="400" font-size="10" fill="#777">entitlements (ACL)</text>
+</svg>
+</div>
+
+<h3>The integration patterns I used (the real vocabulary)</h3>
+<div class="pros-cons">
+  <div class="pros">
+    <h4>Upstream / Downstream</h4>
+    <ul>
+      <li><strong>Published Language + Open Host Service:</strong> Learning publishes a well-defined <em>LessonCompleted</em> event; any context can subscribe. Learning doesn't know who listens.</li>
+      <li><strong>Conformist:</strong> everyone accepts Identity's <em>UserId</em> as-is.</li>
+      <li><strong>Anti-Corruption Layer (ACL):</strong> Learning/Engagement translate Billing's entitlement model into their own terms, shielding the core.</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>Symmetric</h4>
+    <ul>
+      <li><strong>Partnership:</strong> Engagement &amp; Social co-evolve leaderboards (leagues need the social graph; social shows league standings).</li>
+      <li><strong>Shared Kernel (avoided):</strong> tempting to share a "User" model everywhere — we deliberately DON'T, to keep contexts independent.</li>
+    </ul>
+  </div>
+</div>

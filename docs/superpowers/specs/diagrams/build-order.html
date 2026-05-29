@@ -1,0 +1,49 @@
+<h2>Phase 3 · What do we build first?</h2>
+<p class="subtitle">A "walking skeleton" = the thinnest end-to-end slice that exercises every layer of the architecture, built around the CORE.</p>
+
+<div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px;overflow:auto">
+<svg viewBox="0 0 820 300" width="100%" style="font-family:system-ui,sans-serif">
+  <defs><marker id="ab" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2e7d32"/></marker></defs>
+  <text x="410" y="22" text-anchor="middle" font-size="13" font-weight="700">First slice: "Earn XP for completing a lesson" — straight through the stack</text>
+
+  <rect x="60" y="44" width="700" height="40" rx="8" fill="#ede7f6" stroke="#7e57c2"/>
+  <text x="410" y="69" text-anchor="middle" font-size="12">API endpoint  ·  POST /lessons/{id}/complete  (auth = fake current user for now)</text>
+
+  <rect x="60" y="96" width="700" height="40" rx="8" fill="#e8f5e9" stroke="#43a047"/>
+  <text x="410" y="121" text-anchor="middle" font-size="12">Application  ·  CompleteLesson command → handler → raises LessonCompleted (stub Learning)</text>
+
+  <rect x="60" y="148" width="700" height="40" rx="8" fill="#fff3cd" stroke="#e0a800" stroke-width="2.5"/>
+  <text x="410" y="173" text-anchor="middle" font-size="12" font-weight="700">DOMAIN (core) · Engagement handler: LearnerEngagement.AwardXp() → emits XpAwarded</text>
+
+  <rect x="60" y="200" width="700" height="40" rx="8" fill="#e1f5fe" stroke="#039be5"/>
+  <text x="410" y="225" text-anchor="middle" font-size="12">Infrastructure · EF Core repo persists to SQL Server (engagement schema) + outbox-ready</text>
+
+  <line x1="410" y1="84" x2="410" y2="96" stroke="#2e7d32" stroke-width="2" marker-end="url(#ab)"/>
+  <line x1="410" y1="136" x2="410" y2="148" stroke="#2e7d32" stroke-width="2" marker-end="url(#ab)"/>
+  <line x1="410" y1="188" x2="410" y2="200" stroke="#2e7d32" stroke-width="2" marker-end="url(#ab)"/>
+  <text x="410" y="262" text-anchor="middle" font-size="11" fill="#555">Query side: GET /me/engagement → returns total XP</text>
+</svg>
+</div>
+
+<h3>Build-order options</h3>
+<div class="options">
+  <div class="option" data-choice="skeleton" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>Engagement walking skeleton (recommended)</h3><p>Thinnest core slice: award + read XP, end-to-end. Stub the lesson trigger &amp; fake the current user. Validates the WHOLE architecture and models the core first.</p></div>
+  </div>
+  <div class="option" data-choice="learning" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>Learning engine first</h3><p>Build real lessons/exercises/grading so there's genuine input, then Engagement. More upfront work before the core is validated.</p></div>
+  </div>
+  <div class="option" data-choice="identity" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content"><h3>Identity/foundation first (bottom-up)</h3><p>Auth &amp; accounts first. Safe-feeling, but you spend early effort on a GENERIC subdomain and validate the core last.</p></div>
+  </div>
+</div>
+
+<h3>Proposed sequence after the skeleton</h3>
+<p style="font-size:12.5px;line-height:1.6">
+1. <strong>Engagement skeleton</strong> (XP) → 2. grow Engagement (<strong>streaks</strong>, then <strong>leagues</strong>) →
+3. <strong>Learning</strong> (real lessons replace the stub) → 4. <strong>Identity</strong> (real auth replaces the fake user) →
+5. Notifications / Social / Billing as needed. We always keep a running, demoable system.
+</p>

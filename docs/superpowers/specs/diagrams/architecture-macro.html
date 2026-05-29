@@ -1,0 +1,89 @@
+<h2>2a · Macro Architecture — the Modular Monolith</h2>
+<p class="subtitle">One deployable (the API host). Modules are isolated as if they were services. Angular is just one client of the API.</p>
+
+<div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px;overflow:auto">
+<svg viewBox="0 0 980 560" width="100%" style="font-family:system-ui,sans-serif">
+  <defs>
+    <marker id="a2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#555"/></marker>
+  </defs>
+
+  <!-- Angular client -->
+  <rect x="370" y="14" width="240" height="56" rx="8" fill="#ede7f6" stroke="#7e57c2"/>
+  <text x="490" y="38" text-anchor="middle" font-size="13" font-weight="700">Angular SPA</text>
+  <text x="490" y="56" text-anchor="middle" font-size="11" fill="#555">browser client · talks HTTP/JSON</text>
+
+  <line x1="490" y1="70" x2="490" y2="96" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
+
+  <!-- API Host boundary -->
+  <rect x="30" y="100" width="920" height="320" rx="10" fill="#fafafa" stroke="#bbb" stroke-dasharray="6,4"/>
+  <text x="48" y="122" font-size="12" font-weight="700" fill="#777">ASP.NET Core Host (single deployable) — composition root + API endpoints</text>
+
+  <!-- Modules row -->
+  <g>
+    <rect x="48" y="150" width="200" height="120" rx="8" fill="#eceff1" stroke="#90a4ae"/>
+    <text x="148" y="174" text-anchor="middle" font-size="13" font-weight="700">Identity</text>
+    <text x="148" y="192" text-anchor="middle" font-size="10" fill="#555">generic</text>
+
+    <rect x="262" y="150" width="220" height="120" rx="8" fill="#e3f2fd" stroke="#42a5f5"/>
+    <text x="372" y="174" text-anchor="middle" font-size="13" font-weight="700">Learning</text>
+    <text x="372" y="192" text-anchor="middle" font-size="10" fill="#555">supporting · catalog, engine, grading, progress</text>
+
+    <rect x="496" y="150" width="220" height="120" rx="8" fill="#fff3cd" stroke="#e0a800" stroke-width="2.5"/>
+    <text x="606" y="174" text-anchor="middle" font-size="13" font-weight="800">Engagement ★</text>
+    <text x="606" y="192" text-anchor="middle" font-size="10" fill="#555">core · XP, streaks, leagues</text>
+
+    <rect x="730" y="150" width="200" height="120" rx="8" fill="#eceff1" stroke="#90a4ae"/>
+    <text x="830" y="174" text-anchor="middle" font-size="13" font-weight="700">Social · Billing · Notifications</text>
+    <text x="830" y="192" text-anchor="middle" font-size="10" fill="#555">generic modules</text>
+  </g>
+
+  <!-- internal layering hint inside each -->
+  <text x="148" y="220" text-anchor="middle" font-size="9" fill="#777">Domain·App·Infra</text>
+  <text x="372" y="220" text-anchor="middle" font-size="9" fill="#777">Domain·App·Infra</text>
+  <text x="606" y="220" text-anchor="middle" font-size="9" fill="#777">Domain·App·Infra</text>
+  <text x="830" y="240" text-anchor="middle" font-size="9" fill="#777">each: Domain·App·Infra</text>
+
+  <!-- In-process event bus -->
+  <rect x="48" y="300" width="882" height="44" rx="8" fill="#e8f5e9" stroke="#66bb6a"/>
+  <text x="489" y="327" text-anchor="middle" font-size="12" font-weight="700" fill="#2e7d32">In-process event bus + public Contracts (the ONLY way modules talk)</text>
+
+  <!-- module -> bus arrows -->
+  <line x1="148" y1="270" x2="148" y2="300" stroke="#555" stroke-width="1.2" marker-end="url(#a2)"/>
+  <line x1="372" y1="270" x2="372" y2="300" stroke="#555" stroke-width="1.2" marker-end="url(#a2)"/>
+  <line x1="606" y1="270" x2="606" y2="300" stroke="#555" stroke-width="1.2" marker-end="url(#a2)"/>
+  <line x1="830" y1="270" x2="830" y2="300" stroke="#555" stroke-width="1.2" marker-end="url(#a2)"/>
+
+  <!-- DB -->
+  <line x1="489" y1="344" x2="489" y2="372" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
+  <rect x="300" y="372" width="380" height="40" rx="8" fill="#fff8e1" stroke="#ffb300"/>
+  <text x="490" y="397" text-anchor="middle" font-size="12" font-weight="700">Single physical DB — one SCHEMA per module</text>
+
+  <!-- external -->
+  <rect x="700" y="440" width="250" height="44" rx="8" fill="#fce4ec" stroke="#ec407a"/>
+  <text x="825" y="467" text-anchor="middle" font-size="11" font-weight="700">External: email/push, payment provider</text>
+  <line x1="825" y1="420" x2="825" y2="440" stroke="#999" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#a2)"/>
+</svg>
+</div>
+
+<h3>The rules that make it a MODULAR monolith (not a big ball of mud)</h3>
+<ul style="font-size:13px;line-height:1.6">
+  <li><strong>No direct cross-module references.</strong> Learning cannot <code>new</code> an Engagement class. Modules see each other only through a thin <code>Contracts</code> assembly (events + DTOs) and the event bus.</li>
+  <li><strong>Each module is internally layered</strong> (Clean Architecture — that's screen 2b). Its domain model is <code>internal</code>; nothing leaks out.</li>
+  <li><strong>Data isolation</strong> is what makes future extraction realistic — no cross-module JOINs, no shared tables. That's the open question below.</li>
+</ul>
+
+<h3>Data isolation strategy?</h3>
+<div class="options">
+  <div class="option" data-choice="schema" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>Schema-per-module, one physical DB (recommended)</h3><p>Logical isolation, no cross-schema JOINs allowed. Cheap to run, honest boundaries, easy to split out later.</p></div>
+  </div>
+  <div class="option" data-choice="dbper" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>Database-per-module now</h3><p>Strongest isolation, closest to microservices. More infra/ops overhead for a learning monolith.</p></div>
+  </div>
+  <div class="option" data-choice="shared" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content"><h3>Shared schema, separated by convention</h3><p>Simplest, but boundaries erode fast (someone WILL write a cross-module JOIN). Fights the evolutionary goal.</p></div>
+  </div>
+</div>

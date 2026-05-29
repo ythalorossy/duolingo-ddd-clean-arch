@@ -1,0 +1,90 @@
+<h2>The Learning → Engagement seam: how should they talk?</h2>
+<p class="subtitle">When a learner finishes a lesson, Engagement must award XP, advance the streak, and update league points. How does Engagement find out?</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Option A — Choreography (publish an event)</div>
+    <div class="mockup-body" style="font-size:12px;line-height:1.5">
+      <strong>Flow:</strong> Learning grades the attempt and raises
+      <code>LessonCompleted</code>. It does <em>not</em> know who cares.
+      Engagement subscribes and reacts. So do Notifications, future Achievements, etc.
+      <br><br>
+      <code>Learning ──LessonCompleted──▶ (bus/outbox) ──▶ Engagement</code><br>
+      <code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─▶ Notifications</code>
+      <br><br>
+      <strong>Coupling:</strong> Learning depends on NOBODY. The supporting
+      context stays ignorant of the core. ✅
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Option B — Orchestration (a use-case coordinates)</div>
+    <div class="mockup-body" style="font-size:12px;line-height:1.5">
+      <strong>Flow:</strong> A <code>SubmitLessonAttempt</code> application
+      service calls <code>Learning.Grade()</code>, then explicitly calls
+      <code>Engagement.AwardXp()</code>, then Notifications — all in one place.
+      <br><br>
+      <code>SubmitLessonAttempt ─▶ Learning.Grade()</code><br>
+      <code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─▶ Engagement.AwardXp()</code><br>
+      <code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─▶ Notifications.Send()</code>
+      <br><br>
+      <strong>Coupling:</strong> the orchestrator knows about ALL contexts.
+      Add a new reactor → edit the orchestrator. ⚠️
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>A — Choreography / events</h4>
+    <ul>
+      <li>Core (Engagement) evolves independently; new reactors just subscribe — no edits upstream</li>
+      <li>Learning has zero knowledge of XP/streaks — clean supporting→core direction</li>
+      <li>Naturally extensible (Achievements, Notifications, Analytics all listen)</li>
+      <li>Maps directly to future service extraction (the evolutionary goal)</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>A — costs</h4>
+    <ul>
+      <li>Eventual consistency: XP may land milliseconds later — UI must handle it</li>
+      <li>Harder to trace ("why no XP?") — needs good logging/observability</li>
+      <li>Needs an <strong>outbox</strong> to publish reliably (no lost events)</li>
+    </ul>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>B — Orchestration / direct calls</h4>
+    <ul>
+      <li>Dead simple to read and debug — one linear use-case</li>
+      <li>Can be one atomic transaction (strong consistency)</li>
+      <li>Great when there's exactly one consumer and it'll stay that way</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>B — costs</h4>
+    <ul>
+      <li>Centralizes knowledge of every context in the orchestrator</li>
+      <li>Every new reactor (achievements, analytics) edits this hot path</li>
+      <li>Couples the core's API surface to the lesson-submit flow</li>
+    </ul>
+  </div>
+</div>
+
+<h3>Which seam do you want?</h3>
+<div class="options">
+  <div class="option" data-choice="A" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>Choreography via events (my recommendation)</h3><p>In-process domain event now → integration event via outbox as we evolve.</p></div>
+  </div>
+  <div class="option" data-choice="B" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>Orchestration via direct calls</h3><p>Simpler, atomic, but the use-case knows every context.</p></div>
+  </div>
+  <div class="option" data-choice="hybrid" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content"><h3>Hybrid</h3><p>Orchestrate the must-be-atomic bits; publish events for the optional reactors.</p></div>
+  </div>
+</div>

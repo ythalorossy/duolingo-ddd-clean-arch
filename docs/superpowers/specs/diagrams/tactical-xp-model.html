@@ -1,0 +1,63 @@
+<h2>Phase 4 · Tactical model — Engagement XP slice</h2>
+<p class="subtitle">One aggregate, strongly-typed value objects, one domain event. Small on purpose — but modeled properly.</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Aggregate: LearnerEngagement (root)</div>
+    <div class="mockup-body" style="font-size:12px;line-height:1.55;text-align:left">
+      <strong>Identity:</strong> <code>LearnerId</code> (value object wrapping the Identity UserId — Conformist)<br><br>
+      <strong>State:</strong> <code>TotalXp : Xp</code><br><br>
+      <strong>Behavior:</strong><br>
+      <code>AwardXp(XpAward award)</code><br>
+      &nbsp;&nbsp;• enforces invariants<br>
+      &nbsp;&nbsp;• increases TotalXp<br>
+      &nbsp;&nbsp;• raises <code>XpAwarded</code><br><br>
+      <strong>Invariants (live in the aggregate):</strong><br>
+      &nbsp;&nbsp;• award amount &gt; 0<br>
+      &nbsp;&nbsp;• TotalXp never negative / never overflows<br>
+      &nbsp;&nbsp;• one award per LessonCompleted (idempotent)
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">Value Objects &amp; Event</div>
+    <div class="mockup-body" style="font-size:12px;line-height:1.55;text-align:left">
+      <strong>Xp</strong> — wraps a non-negative int. <code>Xp + XpAward → Xp</code>.
+      No primitive <code>int</code> XP floating around (kills primitive obsession).<br><br>
+      <strong>XpAward</strong> — amount + reason (e.g. <em>LessonCompleted</em>) + source id for idempotency.<br><br>
+      <strong>LearnerId</strong> — strongly-typed id, not a raw <code>Guid</code>.<br><br>
+      <strong>Domain event: XpAwarded</strong><br>
+      <code>(LearnerId, amount, newTotal, occurredOn)</code><br>
+      raised inside the aggregate, dispatched in-process within the same transaction.
+    </div>
+  </div>
+</div>
+
+<h3>The request flow (this is the walking skeleton)</h3>
+<div class="mockup">
+  <div class="mockup-body" style="font-size:12.5px;line-height:1.7;text-align:left">
+    <strong>1.</strong> <code>POST /lessons/{id}/complete</code> → maps to <code>CompleteLesson</code> command (current user = faked for now)<br>
+    <strong>2.</strong> Learning <em>stub</em> handles it and raises <code>LessonCompleted(LearnerId, LessonId)</code><br>
+    <strong>3.</strong> Engagement subscribes → loads/creates <code>LearnerEngagement</code> → <code>AwardXp(policy.For(lesson))</code><br>
+    <strong>4.</strong> Aggregate raises <code>XpAwarded</code>; repo persists to SQL Server <code>engagement</code> schema (1 transaction)<br>
+    <strong>5.</strong> <code>GET /me/engagement</code> → query handler → returns <code>{ totalXp }</code>
+  </div>
+</div>
+
+<h3>One design decision I made for you (challenge it)</h3>
+<div class="pros-cons">
+  <div class="pros">
+    <h4>XP policy lives in ENGAGEMENT, not Learning</h4>
+    <ul>
+      <li>Learning only announces "a lesson was completed." It doesn't know XP exists.</li>
+      <li>Engagement owns "how much is it worth" — that's a core-domain rule (and will get rich later: combos, boosts, weekend XP).</li>
+      <li>For the skeleton: a trivial flat policy (e.g. 10 XP). The seam is what matters, not the number.</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>The alternative (rejected)</h4>
+    <ul>
+      <li>Learning emits the XP amount in the event.</li>
+      <li>Rejected: it leaks an Engagement concern into a supporting context and couples them.</li>
+    </ul>
+  </div>
+</div>
