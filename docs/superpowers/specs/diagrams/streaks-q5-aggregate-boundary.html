@@ -1,0 +1,56 @@
+<h2>Q5 · One big aggregate, or two small ones?</h2>
+<p class="subtitle">Both XP and streak react to LessonCompleted. Do they share an aggregate?</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">B · Pile it onto LearnerEngagement ⚠️</div>
+    <div class="mockup-body" style="font-size:12px;line-height:1.6;text-align:left">
+      <pre style="font-size:11.5px;margin:0">LearnerEngagement (aggregate)
+  TotalXp
+  AppliedAwards[]
+  CurrentStreak      ← new
+  LongestStreak      ← new
+  LastQualifyingDate ← new
+  TimeZoneId         ← new
+  ...later: leagues? achievements?</pre>
+      One aggregate that keeps growing. XP and streak get loaded/saved/locked together
+      despite having <b>no shared invariant</b>. This is the road to a "god aggregate."
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">A · Two small aggregates (recommended)</div>
+    <div class="mockup-body" style="font-size:12px;line-height:1.6;text-align:left">
+      <pre style="font-size:11.5px;margin:0">Engagement context
+ ├─ XpAccount (aggregate)      keyed by LearnerId
+ │    TotalXp, AppliedAwards[]
+ └─ LearnerStreak (aggregate)  keyed by LearnerId
+      Current, Longest,
+      LastQualifyingDate, TimeZoneId
+
+both subscribe to LessonCompleted independently</pre>
+      Each aggregate is small, single-purpose, independently testable and lockable.
+    </div>
+  </div>
+</div>
+
+<h3>The principle</h3>
+<div class="mockup">
+  <div class="mockup-body" style="font-size:12.5px;line-height:1.6;text-align:left">
+    An <b>aggregate is a consistency boundary</b> — group only what must change together to
+    hold an invariant. XP and streak share <b>no invariant</b> (awarding XP doesn't constrain
+    the streak count). So they should be <b>separate aggregates</b>, each keyed by LearnerId,
+    each reacting to <code>LessonCompleted</code> on its own. This also showcases our
+    choreography seam: <b>two independent subscribers to one event</b> — no orchestrator.
+  </div>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="two-aggregates" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>Separate LearnerStreak aggregate (recommended)</h3><p>New aggregate + table. Optionally rename the existing <code>LearnerEngagement</code> → <code>XpAccount</code> for honesty, now that "engagement" is broader than XP.</p></div>
+  </div>
+  <div class="option" data-choice="one-aggregate" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>Add streak to LearnerEngagement</h3><p>Fewer types now, but mixes unrelated state and starts a god aggregate.</p></div>
+  </div>
+</div>

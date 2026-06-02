@@ -1,0 +1,40 @@
+<h2>Streaks — Sub-project 2</h2>
+<p class="subtitle">Growing the Engagement core. We'll work through: <b>what counts as a day</b> → <b>day boundary / timezone</b> → <b>state machine</b> → <b>streak freeze scope</b> → <b>data model & integration</b>.</p>
+
+<h3>Q1 · What does it take to keep the streak alive for a day?</h3>
+<p class="subtitle">A "streak" = consecutive days of qualifying activity. But what makes a day <em>qualify</em>? Here are the two candidate rules on a 7-day timeline (✅ = day qualifies, ❌ = missed).</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">A · Any lesson completed</div>
+    <div class="mockup-body" style="font-size:12px;line-height:1.7;text-align:left">
+      One <code>LessonCompleted</code> on a day = that day qualifies.
+      <pre style="font-size:12px;margin:6px 0">Mon Tue Wed Thu Fri Sat Sun
+ ✅  ✅  ✅  ❌  ✅  ✅  ✅
+ 1   2   3   0   1   2   3   ← streak</pre>
+      Simple. Streak counts "days you showed up at all."
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">B · Meet a daily goal</div>
+    <div class="mockup-body" style="font-size:12px;line-height:1.7;text-align:left">
+      A day qualifies only if you hit a goal (e.g. ≥ 1 goal's worth of XP / N lessons).
+      <pre style="font-size:12px;margin:6px 0">Mon Tue Wed Thu Fri Sat Sun
+ ✅  ⚠️  ✅  ✅  ❌  ✅  ✅
+ 1   1   2   3   0   1   2   ← streak
+(Tue: did a lesson but missed goal → ⚠️ no credit)</pre>
+      Richer: introduces a "daily goal" concept the streak depends on.
+    </div>
+  </div>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="any-lesson" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>Any lesson completed counts</h3><p>Day qualifies on the first LessonCompleted. No goal concept yet.</p></div>
+  </div>
+  <div class="option" data-choice="daily-goal" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>Must meet a daily goal</h3><p>Day qualifies only when a configurable daily goal is met. Adds a DailyGoal concept.</p></div>
+  </div>
+</div>
