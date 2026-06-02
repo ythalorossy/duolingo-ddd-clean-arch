@@ -1,0 +1,28 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Host/Host.csproj" />
+  </Folder>
+  <Folder Name="/src/BuildingBlocks/" />
+  <Folder Name="/src/BuildingBlocks/Contracts/">
+    <Project Path="src/BuildingBlocks/Contracts/BuildingBlocks.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/BuildingBlocks/Domain/">
+    <Project Path="src/BuildingBlocks/Domain/BuildingBlocks.Domain.csproj" />
+  </Folder>
+  <Folder Name="/src/BuildingBlocks/Mediator/">
+    <Project Path="src/BuildingBlocks/Mediator/BuildingBlocks.Mediator.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Engagement/">
+    <Project Path="src/Modules/Engagement/Engagement.Application/Engagement.Application.csproj" />
+    <Project Path="src/Modules/Engagement/Engagement.Domain/Engagement.Domain.csproj" />
+    <Project Path="src/Modules/Engagement/Engagement.Infrastructure/Engagement.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Learning/">
+    <Project Path="src/Modules/Learning/Learning.Stub/Learning.Stub.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Engagement.Domain.Tests/Engagement.Domain.Tests.csproj" />
+    <Project Path="tests/Engagement.Integration.Tests/Engagement.Integration.Tests.csproj" />
+  </Folder>
+</Solution>

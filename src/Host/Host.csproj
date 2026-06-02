@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Modules\Engagement\Engagement.Application\Engagement.Application.csproj" />
+    <ProjectReference Include="..\Modules\Engagement\Engagement.Infrastructure\Engagement.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Learning\Learning.Stub\Learning.Stub.csproj" />
+    <ProjectReference Include="..\BuildingBlocks\Mediator\BuildingBlocks.Mediator.csproj" />
+    <ProjectReference Include="..\BuildingBlocks\Contracts\BuildingBlocks.Contracts.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>
