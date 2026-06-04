@@ -5,12 +5,6 @@ namespace Learning.Stub;
 
 public sealed record CompleteLesson(Guid LearnerId, Guid LessonId) : IRequest<Unit>;
 
-// A tiny stand-in for "no meaningful return value" so the command fits IRequest<T>.
-public readonly record struct Unit
-{
-    public static readonly Unit Value = new();
-}
-
 public sealed class CompleteLessonHandler(IMediator mediator) : IRequestHandler<CompleteLesson, Unit>
 {
     public async Task<Unit> HandleAsync(CompleteLesson request, CancellationToken ct)
