@@ -6,8 +6,8 @@ namespace Engagement.Integration.Tests.Architecture;
 
 public class ArchitectureTests
 {
-    private static readonly Assembly DomainAssembly = typeof(global::Engagement.Domain.LearnerEngagement).Assembly;
-    private static readonly Assembly ApplicationAssembly = typeof(global::Engagement.Application.GetLearnerEngagement).Assembly;
+    private static readonly Assembly DomainAssembly = typeof(global::Engagement.Domain.XpAccount).Assembly;
+    private static readonly Assembly ApplicationAssembly = typeof(global::Engagement.Application.GetXpAccount).Assembly;
     private static readonly Assembly HostAssembly = typeof(Program).Assembly;
 
     [Fact] // Criterion 5: domain depends on nothing infrastructural

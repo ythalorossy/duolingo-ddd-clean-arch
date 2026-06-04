@@ -1,6 +1,6 @@
 namespace Engagement.Domain;
 
-// Owned by LearnerEngagement; persisted so idempotency survives reloads.
+// Owned by XpAccount; persisted so idempotency survives reloads.
 public sealed class AppliedAward
 {
     public Guid SourceId { get; private set; }

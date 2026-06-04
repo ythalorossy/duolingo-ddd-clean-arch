@@ -7,12 +7,12 @@ namespace Engagement.Integration.Tests.Application;
 
 public class EngagementApplicationTests
 {
-    private sealed class InMemoryRepo : ILearnerEngagementRepository
+    private sealed class InMemoryRepo : IXpAccountRepository
     {
-        private readonly Dictionary<Guid, LearnerEngagement> _store = new();
-        public Task<LearnerEngagement?> GetAsync(LearnerId id, CancellationToken ct) =>
+        private readonly Dictionary<Guid, XpAccount> _store = new();
+        public Task<XpAccount?> GetAsync(LearnerId id, CancellationToken ct) =>
             Task.FromResult(_store.GetValueOrDefault(id.Value));
-        public Task AddAsync(LearnerEngagement learner, CancellationToken ct)
+        public Task AddAsync(XpAccount learner, CancellationToken ct)
         {
             _store[learner.Id.Value] = learner;
             return Task.CompletedTask;
@@ -54,9 +54,9 @@ public class EngagementApplicationTests
     public async Task Query_returns_zero_for_an_unknown_learner()
     {
         var repo = new InMemoryRepo();
-        var handler = new GetLearnerEngagementHandler(repo);
+        var handler = new GetXpAccountHandler(repo);
 
-        var result = await handler.HandleAsync(new GetLearnerEngagement(Guid.NewGuid()), CancellationToken.None);
+        var result = await handler.HandleAsync(new GetXpAccount(Guid.NewGuid()), CancellationToken.None);
 
         Assert.Equal(0, result.TotalXp);
     }

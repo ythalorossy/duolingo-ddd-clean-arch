@@ -32,8 +32,8 @@ public class EngagementPersistenceTests
 
         await using (var ctx = NewContext())
         {
-            var repo = new LearnerEngagementRepository(ctx);
-            var learner = LearnerEngagement.Create(learnerId);
+            var repo = new XpAccountRepository(ctx);
+            var learner = XpAccount.Create(learnerId);
             learner.AwardXp(new XpAward(10, "LessonCompleted", Guid.NewGuid()));
             await repo.AddAsync(learner, CancellationToken.None);
             await repo.SaveChangesAsync(CancellationToken.None);
@@ -41,7 +41,7 @@ public class EngagementPersistenceTests
 
         await using (var ctx = NewContext())
         {
-            var repo = new LearnerEngagementRepository(ctx);
+            var repo = new XpAccountRepository(ctx);
             var reloaded = await repo.GetAsync(learnerId, CancellationToken.None);
 
             Assert.NotNull(reloaded);
@@ -55,9 +55,9 @@ public class EngagementPersistenceTests
     {
         var learnerId = new LearnerId(Guid.NewGuid());
         await using var ctx = NewContext();
-        var repo = new LearnerEngagementRepository(ctx);
+        var repo = new XpAccountRepository(ctx);
 
-        var learner = LearnerEngagement.Create(learnerId);
+        var learner = XpAccount.Create(learnerId);
         learner.AwardXp(new XpAward(10, "LessonCompleted", Guid.NewGuid()));
         await repo.AddAsync(learner, CancellationToken.None);
         await repo.SaveChangesAsync(CancellationToken.None);

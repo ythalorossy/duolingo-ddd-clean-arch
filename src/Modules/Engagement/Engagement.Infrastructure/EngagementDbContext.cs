@@ -8,12 +8,13 @@ public sealed class EngagementDbContext(DbContextOptions<EngagementDbContext> op
 {
     public const string Schema = "engagement";
 
-    public DbSet<LearnerEngagement> Learners => Set<LearnerEngagement>();
+    public DbSet<XpAccount> XpAccounts => Set<XpAccount>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema(Schema);
-        modelBuilder.ApplyConfiguration(new LearnerEngagementConfiguration());
+        modelBuilder.ApplyConfiguration(new XpAccountConfiguration());
+        // LearnerStreak configuration is added in Task 6
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken ct = default)

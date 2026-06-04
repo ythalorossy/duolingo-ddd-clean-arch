@@ -4,11 +4,11 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Engagement.Infrastructure;
 
-internal sealed class LearnerEngagementConfiguration : IEntityTypeConfiguration<LearnerEngagement>
+internal sealed class XpAccountConfiguration : IEntityTypeConfiguration<XpAccount>
 {
-    public void Configure(EntityTypeBuilder<LearnerEngagement> builder)
+    public void Configure(EntityTypeBuilder<XpAccount> builder)
     {
-        builder.ToTable("Learners");
+        builder.ToTable("XpAccounts");
 
         builder.HasKey(l => l.Id);
         builder.Property(l => l.Id)

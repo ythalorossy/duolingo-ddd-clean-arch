@@ -11,7 +11,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HeaderCurrentUser>();
 
 builder.Services.AddMediator(
-    typeof(GetLearnerEngagement).Assembly,   // Engagement.Application handlers
+    typeof(GetXpAccount).Assembly,   // Engagement.Application handlers
     LearningStubExtensions.Assembly);         // Learning.Stub handlers
 
 builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
@@ -30,10 +30,10 @@ app.MapPost("/lessons/{lessonId:guid}/complete",
         return Results.Accepted();
     });
 
-app.MapGet("/me/engagement",
+app.MapGet("/me/xp",
     async (ICurrentUser user, IMediator mediator, CancellationToken ct) =>
     {
-        var dto = await mediator.SendAsync(new GetLearnerEngagement(user.LearnerId), ct);
+        var dto = await mediator.SendAsync(new GetXpAccount(user.LearnerId), ct);
         return Results.Ok(dto);
     });
 

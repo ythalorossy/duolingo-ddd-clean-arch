@@ -10,7 +10,7 @@ public static class EngagementInfrastructureExtensions
         this IServiceCollection services, string connectionString)
     {
         services.AddDbContext<EngagementDbContext>(options => options.UseSqlServer(connectionString));
-        services.AddScoped<ILearnerEngagementRepository, LearnerEngagementRepository>();
+        services.AddScoped<IXpAccountRepository, XpAccountRepository>();
         services.AddScoped<LessonCompletionXpPolicy>();
         return services;
     }

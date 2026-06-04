@@ -2,7 +2,7 @@ using BuildingBlocks.Domain;
 
 namespace Engagement.Domain;
 
-public sealed class LearnerEngagement : AggregateRoot
+public sealed class XpAccount : AggregateRoot
 {
     private readonly List<AppliedAward> _appliedAwards = new();
 
@@ -10,9 +10,9 @@ public sealed class LearnerEngagement : AggregateRoot
     public Xp TotalXp { get; private set; } = Xp.Zero;
     public IReadOnlyCollection<AppliedAward> AppliedAwards => _appliedAwards.AsReadOnly();
 
-    private LearnerEngagement() { } // EF
+    private XpAccount() { } // EF
 
-    public static LearnerEngagement Create(LearnerId id) => new()
+    public static XpAccount Create(LearnerId id) => new()
     {
         Id = id ?? throw new ArgumentNullException(nameof(id)),
         TotalXp = Xp.Zero
