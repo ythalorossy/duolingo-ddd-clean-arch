@@ -4,6 +4,7 @@ using Engagement.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Engagement.Infrastructure.Migrations
 {
     [DbContext(typeof(EngagementDbContext))]
-    partial class EngagementDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260604205735_AddLearnerStreak")]
+    partial class AddLearnerStreak
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -68,11 +71,12 @@ namespace Engagement.Infrastructure.Migrations
                 {
                     b.OwnsMany("Engagement.Domain.AppliedAward", "AppliedAwards", b1 =>
                         {
-                            b1.Property<int>("Id")
-                                .ValueGeneratedOnAdd()
-                                .HasColumnType("int");
+                            b1.Property<Guid>("LearnerId")
+                                .HasColumnType("uniqueidentifier");
 
-                            SqlServerPropertyBuilderExtensions.UseIdentityColumn(b1.Property<int>("Id"));
+                            b1.Property<Guid>("SourceId")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("uniqueidentifier");
 
                             b1.Property<int>("Amount")
                                 .HasColumnType("int");
@@ -80,16 +84,7 @@ namespace Engagement.Infrastructure.Migrations
                             b1.Property<DateTimeOffset>("AppliedAt")
                                 .HasColumnType("datetimeoffset");
 
-                            b1.Property<Guid>("LearnerId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<Guid>("SourceId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.HasKey("Id");
-
-                            b1.HasIndex("LearnerId", "SourceId")
-                                .IsUnique();
+                            b1.HasKey("LearnerId", "SourceId");
 
                             b1.ToTable("AppliedAwards", "engagement");
 

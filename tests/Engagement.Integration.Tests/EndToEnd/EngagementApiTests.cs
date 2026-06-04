@@ -27,7 +27,7 @@ public class EngagementApiTests(EngagementApiFactory factory) : IClassFixture<En
         var post = await client.PostAsync($"/lessons/{Guid.NewGuid()}/complete", null);
         Assert.Equal(HttpStatusCode.Accepted, post.StatusCode);
 
-        var dto = await client.GetFromJsonAsync<EngagementResponse>("/me/engagement");
+        var dto = await client.GetFromJsonAsync<EngagementResponse>("/me/xp");
         Assert.NotNull(dto);
         Assert.Equal(10, dto!.TotalXp);
     }
@@ -49,7 +49,7 @@ public class EngagementApiTests(EngagementApiFactory factory) : IClassFixture<En
             await mediator.PublishAsync(evt); // same EventId -> same SourceId
         }
 
-        var dto = await ClientForLearner(learnerId).GetFromJsonAsync<EngagementResponse>("/me/engagement");
+        var dto = await ClientForLearner(learnerId).GetFromJsonAsync<EngagementResponse>("/me/xp");
         Assert.Equal(10, dto!.TotalXp);
     }
 }

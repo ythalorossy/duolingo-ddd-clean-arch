@@ -11,7 +11,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HeaderCurrentUser>();
 
 builder.Services.AddMediator(
-    typeof(GetLearnerEngagement).Assembly,   // Engagement.Application handlers
+    typeof(GetXpAccount).Assembly,   // Engagement.Application handlers
     LearningStubExtensions.Assembly);         // Learning.Stub handlers
 
 builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
@@ -30,12 +30,31 @@ app.MapPost("/lessons/{lessonId:guid}/complete",
         return Results.Accepted();
     });
 
-app.MapGet("/me/engagement",
+app.MapGet("/me/xp",
     async (ICurrentUser user, IMediator mediator, CancellationToken ct) =>
     {
-        var dto = await mediator.SendAsync(new GetLearnerEngagement(user.LearnerId), ct);
+        var dto = await mediator.SendAsync(new GetXpAccount(user.LearnerId), ct);
         return Results.Ok(dto);
     });
+
+app.MapPut("/me/timezone",
+    async (SetTimeZoneRequest body, ICurrentUser user, IMediator mediator, CancellationToken ct) =>
+    {
+        try
+        {
+            await mediator.SendAsync(new SetLearnerTimeZone(user.LearnerId, body.IanaId), ct);
+            return Results.NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            // An invalid IANA id is a client error (bad input), not a 500.
+            return Results.BadRequest(new { error = ex.Message });
+        }
+    });
+
+app.MapGet("/me/streak",
+    async (ICurrentUser user, IMediator mediator, CancellationToken ct) =>
+        Results.Ok(await mediator.SendAsync(new GetLearnerStreak(user.LearnerId), ct)));
 
 app.Run();
 

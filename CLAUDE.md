@@ -115,4 +115,9 @@ implementation**. Each sub-project gets its own branch (`feat/<name>`) and PR.
 ## Status
 
 - ✅ **Sub-project 1 — Engagement XP walking skeleton** (PR #1): earn + read XP end-to-end.
-- ⏭️ **Next:** grow Engagement (streaks → leagues) → real Learning engine → real Identity.
+- ✅ **Sub-project 2 — Streaks** (PR #2): timezone-correct daily streaks (current + longest) as
+  a derived `LearnerStreak` aggregate reacting to `LessonCompleted`; renamed
+  `LearnerEngagement` → `XpAccount`. Also fixed a latent slice-1 bug (owned `AppliedAward`
+  now uses a store-generated key so re-awards INSERT instead of UPDATE).
+- ⏭️ **Next:** streak freeze (inventory + auto-apply, plugging into the gap case) → leagues →
+  real Learning engine → real Identity.

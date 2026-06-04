@@ -1,0 +1,69 @@
+<h2>Q2b · How does Engagement get the learner's time zone?</h2>
+<p class="subtitle">Time zone is owned by Identity (conceptually). Engagement needs it locally to compute the day boundary. Three ways to bridge that boundary:</p>
+
+<div class="section">
+  <div class="label">Option 1 — Engagement keeps a local replica (recommended)</div>
+  <div class="mockup">
+    <div class="mockup-body" style="font-size:12px;line-height:1.7;text-align:left">
+      <pre style="font-size:12px;margin:0">Identity (truth) ──LearnerTimeZoneChanged event──▶ Engagement stores its own copy
+                                                   (default UTC; set via command now,
+                                                    Identity event later)
+LessonCompleted ─▶ streak uses the LOCAL copy (no call-out)</pre>
+      Each context owns the slice of data it needs, in its own model, updated by events.
+    </div>
+  </div>
+</div>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Option 2 — time zone on each API request</div>
+    <div class="mockup-body" style="font-size:12px;line-height:1.6;text-align:left">
+      Client sends <code>X-Time-Zone</code> header with the lesson-complete call.
+      <br><br>Simplest to wire, but: no source of truth, breaks for events not driven by
+      that request, and scatters a profile concern across callers.
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">Option 3 — synchronous call to Identity</div>
+    <div class="mockup-body" style="font-size:12px;line-height:1.6;text-align:left">
+      Engagement calls Identity ("what's this learner's TZ?") every time it computes a day.
+      <br><br>Always fresh, but couples the contexts at runtime, adds latency, and fights
+      the "extractable later" goal.
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>Why Option 1 (local replica)</h4>
+    <ul>
+      <li>Engagement stays self-sufficient — no runtime coupling to Identity</li>
+      <li>Teaches that <b>data duplication across contexts is normal</b> (truth + local cache via events)</li>
+      <li>For this slice: set via a small command (Identity is still faked); swap to an event later — no streak logic changes</li>
+      <li>Time zone rarely changes, so a replica is cheap and almost always fresh</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>The trade-off you accept</h4>
+    <ul>
+      <li>Eventual consistency: if a learner changes TZ, Engagement's copy updates when the event arrives (fine — TZ changes are rare)</li>
+      <li>A bit more plumbing now (a TimeZoneId field + a set-timezone command)</li>
+    </ul>
+  </div>
+</div>
+
+<h3>Decision</h3>
+<div class="options">
+  <div class="option" data-choice="replica" onclick="toggleSelect(this)">
+    <div class="letter">1</div>
+    <div class="content"><h3>Local replica on Engagement (recommended)</h3><p>Store TimeZoneId; default UTC; set via command now, Identity event later.</p></div>
+  </div>
+  <div class="option" data-choice="request" onclick="toggleSelect(this)">
+    <div class="letter">2</div>
+    <div class="content"><h3>Per-request header</h3><p>Pass time zone with each call. Simple, but no source of truth.</p></div>
+  </div>
+  <div class="option" data-choice="sync" onclick="toggleSelect(this)">
+    <div class="letter">3</div>
+    <div class="content"><h3>Synchronous call to Identity</h3><p>Always fresh, but runtime coupling + latency.</p></div>
+  </div>
+</div>

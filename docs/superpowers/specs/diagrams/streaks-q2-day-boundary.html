@@ -1,0 +1,29 @@
+<h2>Q2 · When does a "day" end? (the timezone trap)</h2>
+<p class="subtitle">"Consecutive days" is meaningless until we define a day boundary. Here's a learner in New York (UTC−05) who studies late at night.</p>
+
+<div class="mockup">
+  <div class="mockup-header">The same two lessons, interpreted two ways</div>
+  <div class="mockup-body" style="font-size:12.5px;line-height:1.8;text-align:left">
+    <b>Lesson 1:</b> Mon <b>11:30 PM</b> local &nbsp;=&nbsp; Tue 04:30 <b>UTC</b><br>
+    <b>Lesson 2:</b> Wed <b>7:00 AM</b> local &nbsp;=&nbsp; Wed 12:00 <b>UTC</b><br><br>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <tr style="background:#f5f5f5"><th style="text-align:left;padding:6px">Interpretation</th><th style="padding:6px">L1 day</th><th style="padding:6px">L2 day</th><th style="padding:6px">Gap?</th><th style="padding:6px">Streak result</th></tr>
+      <tr><td style="padding:6px"><b>Local date</b> (New York)</td><td style="text-align:center">Mon</td><td style="text-align:center">Wed</td><td style="text-align:center">Tue missed</td><td style="padding:6px;color:#2e7d32"><b>✅ resets — correct</b> (they really did skip Tuesday)</td></tr>
+      <tr style="background:#fafafa"><td style="padding:6px"><b>UTC date</b></td><td style="text-align:center">Tue</td><td style="text-align:center">Wed</td><td style="text-align:center">none</td><td style="padding:6px;color:#c62828"><b>❌ keeps streak — WRONG</b> (Tue→Wed looks consecutive)</td></tr>
+    </table>
+  </div>
+</div>
+
+<p class="subtitle">UTC boundaries silently award streaks the learner didn't earn (and steal ones they did). Correct streaks require the learner's <b>local</b> day boundary.</p>
+
+<h3>Decision: which day boundary?</h3>
+<div class="options">
+  <div class="option" data-choice="local" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>Learner's local time zone (recommended)</h3><p>Convert each LessonCompleted's UTC instant to the learner's local date. Correct, but we must know their time zone.</p></div>
+  </div>
+  <div class="option" data-choice="utc" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>UTC for everyone</h3><p>Trivial to implement, no time zone needed — but produces wrong streaks for anyone not near UTC. Not acceptable for a real product.</p></div>
+  </div>
+</div>

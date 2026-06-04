@@ -1,0 +1,41 @@
+<h2>Q4 · Streak freeze — in this slice, or the next?</h2>
+<p class="subtitle">A streak freeze is a consumable that bridges a missed day so the streak survives.</p>
+
+<div class="mockup">
+  <div class="mockup-header">What a freeze does (missed Thursday, 1 freeze available)</div>
+  <div class="mockup-body" style="font-size:12px;line-height:1.7;text-align:left">
+    <pre style="font-size:12px;margin:0">Mon Tue Wed Thu Fri
+ ✅  ✅  ✅  ❄️  ✅
+ 1   2   3   3   4     ← freeze bridges Thu; streak preserved (Thu doesn't add)</pre>
+    Without a freeze, Thursday's gap would reset the streak to 1 on Friday.
+  </div>
+</div>
+
+<h3>What "freeze" actually drags in</h3>
+<ul style="font-size:12.5px;line-height:1.6">
+  <li><b>Inventory</b> — how many freezes a learner holds, and a max (Duolingo caps at 2)</li>
+  <li><b>Earning / buying</b> — freezes come from XP, gems, or purchase (ties into monetization — out of scope)</li>
+  <li><b>Auto-apply rules</b> — consumed automatically on a miss; how many days can be bridged</li>
+  <li><b>Consumption timing</b> — applied lazily at the next qualifying day (fits our derived model)</li>
+</ul>
+
+<h3>Where it plugs into our model (the extension point)</h3>
+<div class="mockup">
+  <div class="mockup-body" style="font-size:12px;line-height:1.6;text-align:left">
+    Our transition's "gap" case (<code>D &gt; lastDate + 1</code>) is exactly where freeze slots in:
+    <br>compute <code>missedDays = D − lastDate − 1</code>; if <code>availableFreezes ≥ missedDays</code>,
+    consume them and continue; else reset. The core model already has the seam.
+  </div>
+</div>
+
+<h3>Decision</h3>
+<div class="options">
+  <div class="option" data-choice="defer" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>Defer freeze to the next slice (recommended)</h3><p>This slice = core streak (derived, timezone, longest). Keep the gap-handling seam ready. Freeze becomes its own focused sub-project (inventory, earning, auto-apply).</p></div>
+  </div>
+  <div class="option" data-choice="include-min" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>Include a minimal freeze now</h3><p>Inventory + auto-consume on a 1-day gap, freezes granted via a command (earning/buying still deferred). Roughly doubles the slice.</p></div>
+  </div>
+</div>

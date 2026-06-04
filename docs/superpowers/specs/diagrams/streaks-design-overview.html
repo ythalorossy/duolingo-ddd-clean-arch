@@ -1,0 +1,69 @@
+<h2>Streaks — design overview</h2>
+<p class="subtitle">Top-down data flow. Two aggregates in the Engagement context now both react to <code>LessonCompleted</code>.</p>
+
+<div class="mockup">
+  <div class="mockup-header">1 · A lesson is completed</div>
+  <div class="mockup-body">
+    <code>POST /lessons/{id}/complete</code> → <b>Learning.Stub</b> raises <b>LessonCompleted</b>
+    → published on the in-process bus.
+  </div>
+</div>
+
+<div style="text-align:center; color:var(--text-secondary); margin:-0.5rem 0 1rem;">↓ &nbsp; fan-out to two independent subscribers &nbsp; ↓</div>
+
+<div class="split">
+  <div class="mockup" style="margin-bottom:0">
+    <div class="mockup-header">Subscriber 1 (existing)</div>
+    <div class="mockup-body">
+      <b>AwardXpForLessonCompleted</b><br>→ <b>XpAccount</b><br>
+      <span class="label" style="margin-top:.5rem">renamed from LearnerEngagement</span>
+    </div>
+  </div>
+  <div class="mockup" style="margin-bottom:0; border-color:var(--warning)">
+    <div class="mockup-header">Subscriber 2 (new) ⭐</div>
+    <div class="mockup-body">
+      <b>RegisterStreakForLessonCompleted</b><br>→ <b>LearnerStreak</b><br>
+      <span class="label" style="margin-top:.5rem">TimeProvider + LearnerTimeZone → local date → transition</span>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:1.5rem">
+  <div class="mockup" style="border-color:var(--warning)">
+    <div class="mockup-header">⭐ LearnerStreak — the new aggregate (keyed by LearnerId)</div>
+    <div class="mockup-body">
+      <b>State:</b> <code>TimeZoneId</code> (LearnerTimeZone value object) · <code>CurrentStreak</code> ·
+      <code>LongestStreak</code> · <code>LastQualifyingDate</code> (DateOnly?, null until first activity)<br><br>
+      <b>Behavior:</b><br>
+      • <code>RegisterQualifyingActivity(utcInstant)</code> — convert to local date, run the 4-case transition, bump longest<br>
+      • <code>ChangeTimeZone(tz)</code> — update the local replica<br>
+      • <code>GetStatus(today)</code> — <b>derived</b> read → Active / AtRisk / Broken + effective current<br><br>
+      <span class="label">idempotent per local DAY — no AppliedAward-style ledger needed</span>
+    </div>
+  </div>
+</div>
+
+<div class="split">
+  <div class="mockup" style="margin-bottom:0">
+    <div class="mockup-header">Set time zone</div>
+    <div class="mockup-body">
+      <code>PUT /me/timezone</code> → <b>SetLearnerTimeZone</b> command → <code>ChangeTimeZone</code>
+    </div>
+  </div>
+  <div class="mockup" style="margin-bottom:0">
+    <div class="mockup-header">Read streak</div>
+    <div class="mockup-body">
+      <code>GET /me/streak</code> → <b>GetLearnerStreak</b> query → <code>GetStatus(today)</code> (derived)
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:1.5rem">
+  <span class="label">Persistence &amp; time</span>
+  <div class="mockup">
+    <div class="mockup-body">
+      SQL table <code>engagement.LearnerStreaks</code> (DateOnly → <code>date</code> column).
+      <b>TimeProvider</b> injected as the clock so tests can pin "today" and walk a learner across days.
+    </div>
+  </div>
+</div>

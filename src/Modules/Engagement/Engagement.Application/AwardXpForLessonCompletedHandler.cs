@@ -5,7 +5,7 @@ using Engagement.Domain;
 namespace Engagement.Application;
 
 public sealed class AwardXpForLessonCompletedHandler(
-    ILearnerEngagementRepository repository,
+    IXpAccountRepository repository,
     LessonCompletionXpPolicy policy) : INotificationHandler<LessonCompleted>
 {
     public async Task HandleAsync(LessonCompleted notification, CancellationToken ct)
@@ -15,7 +15,7 @@ public sealed class AwardXpForLessonCompletedHandler(
         var learner = await repository.GetAsync(learnerId, ct);
         if (learner is null)
         {
-            learner = LearnerEngagement.Create(learnerId);
+            learner = XpAccount.Create(learnerId);
             await repository.AddAsync(learner, ct);
         }
 

@@ -3,9 +3,9 @@ using Xunit;
 
 namespace Engagement.Domain.Tests;
 
-public class LearnerEngagementTests
+public class XpAccountTests
 {
-    private static LearnerEngagement NewLearner() => LearnerEngagement.Create(new LearnerId(Guid.NewGuid()));
+    private static XpAccount NewLearner() => XpAccount.Create(new LearnerId(Guid.NewGuid()));
     private static XpAward Award(int amount = 10) => new(amount, "LessonCompleted", Guid.NewGuid());
 
     [Fact]
