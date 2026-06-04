@@ -37,6 +37,25 @@ app.MapGet("/me/xp",
         return Results.Ok(dto);
     });
 
+app.MapPut("/me/timezone",
+    async (SetTimeZoneRequest body, ICurrentUser user, IMediator mediator, CancellationToken ct) =>
+    {
+        try
+        {
+            await mediator.SendAsync(new SetLearnerTimeZone(user.LearnerId, body.IanaId), ct);
+            return Results.NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            // An invalid IANA id is a client error (bad input), not a 500.
+            return Results.BadRequest(new { error = ex.Message });
+        }
+    });
+
+app.MapGet("/me/streak",
+    async (ICurrentUser user, IMediator mediator, CancellationToken ct) =>
+        Results.Ok(await mediator.SendAsync(new GetLearnerStreak(user.LearnerId), ct)));
+
 app.Run();
 
 // Exposes the implicit Program class to WebApplicationFactory in tests.
