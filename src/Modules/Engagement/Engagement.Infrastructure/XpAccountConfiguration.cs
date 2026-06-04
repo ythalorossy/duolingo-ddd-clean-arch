@@ -28,7 +28,17 @@ internal sealed class XpAccountConfiguration : IEntityTypeConfiguration<XpAccoun
         {
             owned.ToTable("AppliedAwards");
             owned.WithOwner().HasForeignKey("LearnerId");
-            owned.HasKey("LearnerId", nameof(AppliedAward.SourceId));
+
+            // Store-generated shadow surrogate key. A composite (LearnerId, SourceId) key made
+            // EF treat a NEW award on a reloaded (existing) account as Modified -> UPDATE (0 rows
+            // -> DbUpdateConcurrencyException). A generated key gives new dependents a temporary
+            // key value, so EF correctly INSERTs them.
+            owned.Property<int>("Id").ValueGeneratedOnAdd();
+            owned.HasKey("Id");
+
+            // Idempotency backstop in the database; the domain also guards in-memory in AwardXp.
+            owned.HasIndex("LearnerId", nameof(AppliedAward.SourceId)).IsUnique();
+
             owned.Property(a => a.SourceId);
             owned.Property(a => a.Amount);
             owned.Property(a => a.AppliedAt);
