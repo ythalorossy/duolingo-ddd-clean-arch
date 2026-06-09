@@ -97,4 +97,28 @@ public class StreakApplicationTests
         var s = await repo.GetAsync(new LearnerId(learnerId), CancellationToken.None);
         Assert.Equal(LearnerStreak.MaxFreezes, s!.FreezeBalance);
     }
+
+    [Fact]
+    public async Task Query_exposes_projected_freezes_available()
+    {
+        var repo = new InMemoryStreaks();
+        var learnerId = Guid.NewGuid();
+        await new GrantStreakFreezeHandler(repo).HandleAsync(new GrantStreakFreeze(learnerId), CancellationToken.None);
+        await new RegisterStreakForLessonCompletedHandler(repo)
+            .HandleAsync(new LessonCompleted(Guid.NewGuid(), learnerId, Guid.NewGuid(), Noon(2030, 1, 1)), CancellationToken.None);
+
+        var clock = new FakeTimeProvider(new DateTimeOffset(2030, 1, 1, 15, 0, 0, TimeSpan.Zero));
+        var dto = await new GetLearnerStreakHandler(repo, clock)
+            .HandleAsync(new GetLearnerStreak(learnerId), CancellationToken.None);
+
+        Assert.Equal(1, dto.FreezesAvailable);
+    }
+
+    [Fact]
+    public async Task Unknown_learner_reports_zero_freezes()
+    {
+        var dto = await new GetLearnerStreakHandler(new InMemoryStreaks(), new FakeTimeProvider())
+            .HandleAsync(new GetLearnerStreak(Guid.NewGuid()), CancellationToken.None);
+        Assert.Equal(0, dto.FreezesAvailable);
+    }
 }
