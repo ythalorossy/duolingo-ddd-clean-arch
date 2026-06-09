@@ -111,6 +111,8 @@ public class StreakApplicationTests
         var dto = await new GetLearnerStreakHandler(repo, clock)
             .HandleAsync(new GetLearnerStreak(learnerId), CancellationToken.None);
 
+        Assert.Equal(1, dto.CurrentStreak);
+        Assert.Equal("Active", dto.Status);
         Assert.Equal(1, dto.FreezesAvailable);
     }
 
