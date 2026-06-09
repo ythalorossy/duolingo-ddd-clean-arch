@@ -49,6 +49,7 @@ public sealed class LearnerStreak : AggregateRoot
             var survived = consumed == gap;
             CurrentStreak = survived ? CurrentStreak + 1 : 1;
 
+            // survived = gap fully covered; consumed > 0 = at least one freeze was actually spent.
             if (survived && consumed > 0)
                 RaiseDomainEvent(new StreakFrozen(Id.Value, consumed, day, occurredOnUtc));
         }

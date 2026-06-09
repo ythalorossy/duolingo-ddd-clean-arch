@@ -19,6 +19,7 @@ public class LearnerStreakTests
         s.RegisterQualifyingActivity(Noon(2030, 1, 1));
         Assert.Equal(1, s.CurrentStreak);
         Assert.Equal(1, s.LongestStreak);
+        Assert.Empty(s.DomainEvents.OfType<StreakFrozen>());
     }
 
     [Fact]
@@ -229,7 +230,7 @@ public class LearnerStreakTests
         s.RegisterQualifyingActivity(Noon(2030, 1, 3)); // Jan 2 bridged
 
         var frozen = Assert.Single(s.DomainEvents.OfType<StreakFrozen>());
-        Assert.Equal(1, frozen.DaysFrozen);
+        Assert.Equal(1, frozen.FreezesConsumed);
         Assert.Equal(new DateOnly(2030, 1, 3), frozen.Date);
     }
 

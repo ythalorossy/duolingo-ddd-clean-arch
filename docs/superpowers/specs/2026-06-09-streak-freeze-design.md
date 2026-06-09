@@ -182,7 +182,7 @@ classDiagram
     class StreakFrozen {
         <<DomainEvent>>
         +Guid LearnerId
-        +int DaysFrozen
+        +int FreezesConsumed
         +DateOnly Date
     }
     LearnerStreak ..> StreakReport : Report returns

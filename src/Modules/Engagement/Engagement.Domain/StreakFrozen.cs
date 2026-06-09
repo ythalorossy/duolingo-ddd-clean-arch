@@ -6,6 +6,6 @@ namespace Engagement.Domain;
 // No subscriber yet (pattern only); the natural future "streak saved!" notification hook.
 public sealed record StreakFrozen(
     Guid LearnerId,
-    int DaysFrozen,
+    int FreezesConsumed,
     DateOnly Date,
     DateTimeOffset OccurredOn) : IDomainEvent;
