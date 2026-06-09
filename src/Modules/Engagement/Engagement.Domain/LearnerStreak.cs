@@ -10,6 +10,10 @@ public sealed class LearnerStreak : AggregateRoot
     public int LongestStreak { get; private set; }
     public DateOnly? LastQualifyingDate { get; private set; }
 
+    public int FreezeBalance { get; private set; }
+
+    public const int MaxFreezes = 2;
+
     private LearnerStreak() { } // EF
 
     public static LearnerStreak Create(LearnerId id) => new()
@@ -23,6 +27,9 @@ public sealed class LearnerStreak : AggregateRoot
         ArgumentNullException.ThrowIfNull(timeZone);
         TimeZone = timeZone;
     }
+
+    public void GrantFreeze() =>
+        FreezeBalance = Math.Min(FreezeBalance + 1, MaxFreezes);
 
     public void RegisterQualifyingActivity(DateTimeOffset occurredOnUtc)
     {

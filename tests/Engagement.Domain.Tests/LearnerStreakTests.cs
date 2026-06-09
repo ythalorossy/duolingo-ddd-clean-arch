@@ -99,4 +99,27 @@ public class LearnerStreakTests
         Assert.Equal(StreakStatus.None, r.Status);
         Assert.Equal(0, r.CurrentStreak);
     }
+
+    [Fact]
+    public void Granting_a_freeze_increments_the_balance()
+    {
+        var s = NewUtcLearner();
+        s.GrantFreeze();
+        Assert.Equal(1, s.FreezeBalance);
+    }
+
+    [Fact]
+    public void Freeze_balance_is_clamped_at_the_cap()
+    {
+        var s = NewUtcLearner();
+        for (var i = 0; i < 5; i++) s.GrantFreeze();
+        Assert.Equal(LearnerStreak.MaxFreezes, s.FreezeBalance);
+        Assert.Equal(2, LearnerStreak.MaxFreezes);
+    }
+
+    [Fact]
+    public void New_learner_starts_with_zero_freezes()
+    {
+        Assert.Equal(0, NewUtcLearner().FreezeBalance);
+    }
 }
