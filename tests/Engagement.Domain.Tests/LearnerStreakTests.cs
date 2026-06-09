@@ -183,4 +183,40 @@ public class LearnerStreakTests
         Assert.Equal(3, s.CurrentStreak);
         Assert.Equal(3, s.LongestStreak);
     }
+
+    [Fact]
+    public void Report_projects_freeze_coverage_without_consuming_it()
+    {
+        var s = NewUtcLearner();
+        s.GrantFreeze();                                // balance 1
+        s.RegisterQualifyingActivity(Noon(2030, 1, 1)); // current 1, last Jan 1
+        var r = s.Report(new DateOnly(2030, 1, 3));     // Jan 2 missed, freeze would cover it
+        Assert.Equal(StreakStatus.AtRisk, r.Status);    // protected, not broken
+        Assert.Equal(1, r.CurrentStreak);
+        Assert.Equal(0, r.FreezesAvailable);            // projected 1 - 1
+        Assert.Equal(1, s.FreezeBalance);               // STORED balance unchanged — read is pure
+    }
+
+    [Fact]
+    public void Report_is_broken_when_gap_exceeds_freezes()
+    {
+        var s = NewUtcLearner();
+        s.GrantFreeze();                                // 1 freeze
+        s.RegisterQualifyingActivity(Noon(2030, 1, 1));
+        var r = s.Report(new DateOnly(2030, 1, 4));     // 2-day gap, only 1 freeze
+        Assert.Equal(StreakStatus.Broken, r.Status);
+        Assert.Equal(0, r.CurrentStreak);
+        Assert.Equal(0, r.FreezesAvailable);
+    }
+
+    [Fact]
+    public void Report_exposes_balance_while_active()
+    {
+        var s = NewUtcLearner();
+        s.GrantFreeze();
+        s.RegisterQualifyingActivity(Noon(2030, 1, 1));
+        var r = s.Report(new DateOnly(2030, 1, 1));     // active today
+        Assert.Equal(StreakStatus.Active, r.Status);
+        Assert.Equal(1, r.FreezesAvailable);
+    }
 }

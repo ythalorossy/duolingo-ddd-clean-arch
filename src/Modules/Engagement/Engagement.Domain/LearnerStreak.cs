@@ -68,11 +68,17 @@ public sealed class LearnerStreak : AggregateRoot
     public StreakReport Report(DateOnly today)
     {
         if (LastQualifyingDate is not { } last)
-            return new StreakReport(StreakStatus.None, 0, LongestStreak);
-        if (last == today)
-            return new StreakReport(StreakStatus.Active, CurrentStreak, LongestStreak);
-        if (last == today.AddDays(-1))
-            return new StreakReport(StreakStatus.AtRisk, CurrentStreak, LongestStreak);
-        return new StreakReport(StreakStatus.Broken, 0, LongestStreak);
+            return new StreakReport(StreakStatus.None, 0, LongestStreak, FreezeBalance);
+
+        if (today <= last)
+            return new StreakReport(StreakStatus.Active, CurrentStreak, LongestStreak, FreezeBalance);
+
+        // Project the same rule the write path applies — without mutating.
+        var gap = GapBetween(last, today);
+        var consumed = Math.Min(gap, FreezeBalance);
+
+        return consumed == gap
+            ? new StreakReport(StreakStatus.AtRisk, CurrentStreak, LongestStreak, FreezeBalance - consumed)
+            : new StreakReport(StreakStatus.Broken, 0, LongestStreak, FreezeBalance - consumed);
     }
 }
