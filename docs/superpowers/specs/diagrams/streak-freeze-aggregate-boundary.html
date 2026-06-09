@@ -1,0 +1,86 @@
+<h2>Where should freeze state live?</h2>
+<p class="subtitle">Semantics are settled. The real design decision is the <b>aggregate boundary</b> — and the DDD rule that decides it: <i>an aggregate is a consistency boundary. Things that must change together, atomically, belong together.</i></p>
+
+<div class="split">
+
+  <!-- Approach 1 -->
+  <div class="mockup">
+    <div class="mockup-header">A — Freeze count on LearnerStreak &nbsp;★ recommended</div>
+    <div class="mockup-body">
+      <div style="border:2px solid #10b981; border-radius:12px; padding:14px; background:rgba(16,185,129,0.07);">
+        <div style="font-weight:700; margin-bottom:6px;">LearnerStreak &lt;&lt;aggregate&gt;&gt;</div>
+        <div style="font-size:13px; color:#bbb; line-height:1.7;">
+          CurrentStreak · LongestStreak<br>
+          LastQualifyingDate<br>
+          <b style="color:#10b981;">FreezeBalance (new)</b><br>
+          ─────────────<br>
+          RegisterQualifyingActivity()<br>
+          <span style="color:#10b981;">GrantFreeze()</span> · Report(today)
+        </div>
+      </div>
+      <p style="font-size:13px; color:#aaa; margin-top:10px;">
+        Bridging a gap = decrement balance <b>and</b> keep the streak — one object, one transaction.
+        Consumption is persisted on the next qualifying activity; <code>Report</code> projects it purely on read.
+      </p>
+    </div>
+  </div>
+
+  <!-- Approach 2 -->
+  <div class="mockup">
+    <div class="mockup-header">B — Separate StreakFreezeInventory aggregate</div>
+    <div class="mockup-body">
+      <div style="display:flex; gap:8px; align-items:center;">
+        <div style="border:2px solid #f59e0b; border-radius:12px; padding:10px; background:rgba(245,158,11,0.07); flex:1;">
+          <div style="font-weight:700; font-size:13px;">LearnerStreak</div>
+          <div style="font-size:12px; color:#bbb;">streak state</div>
+        </div>
+        <div style="font-size:20px; color:#f59e0b;">⇄</div>
+        <div style="border:2px solid #f59e0b; border-radius:12px; padding:10px; background:rgba(245,158,11,0.07); flex:1;">
+          <div style="font-weight:700; font-size:13px;">FreezeInventory</div>
+          <div style="font-size:12px; color:#bbb;">balance, items</div>
+        </div>
+      </div>
+      <p style="font-size:13px; color:#aaa; margin-top:10px;">
+        Auto-apply now spans <b>two</b> aggregates: either one transaction touching both (couples them anyway)
+        or eventual consistency via events (gap → FreezeApplied → streak update). Heavier; the consistency
+        story gets hard.
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top:6px;">
+  <span class="label">Also considered — and rejecting</span>
+  <p style="font-size:13px; color:#aaa;">
+    <b>C — A nightly settlement job</b> (per-timezone midnight: burn a freeze or break the streak). It makes
+    "freeze applied" a real timed event, but reintroduces exactly the per-user timers / scheduled work the
+    streaks design <i>deliberately avoided</i> ("derived on read, no nightly job"). Freeze should extend that
+    same lazy model, not abandon it.
+  </p>
+</div>
+
+<h3>Which boundary do you want?</h3>
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>One aggregate — FreezeBalance on LearnerStreak ★</h3>
+      <p>Streak + freeze change atomically together. Richest single invariant, no background job, stays lazy. My recommendation.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Two aggregates — separate inventory</h3>
+      <p>More extensible (typed items, expiry) but adds cross-aggregate coordination we don't need yet (YAGNI).</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Nightly settlement job</h3>
+      <p>Timed freeze application. Abandons the no-job lazy model the streak design committed to.</p>
+    </div>
+  </div>
+</div>

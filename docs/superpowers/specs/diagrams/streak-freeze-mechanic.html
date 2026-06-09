@@ -1,0 +1,91 @@
+<h2>Streak Freeze — does this mechanic match your intent?</h2>
+<p class="subtitle">A freeze is an item that auto-protects a streak on a day the learner would otherwise miss. Here's the behaviour I'm assuming — tell me if it's right before we design it.</p>
+
+<div class="mockup">
+  <div class="mockup-header">A learner who starts the week with 2 freezes in inventory</div>
+  <div class="mockup-body">
+    <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap; padding:8px 0;">
+
+      <!-- Mon -->
+      <div style="text-align:center; min-width:92px;">
+        <div class="label" style="margin-bottom:6px;">Mon</div>
+        <div style="font-size:30px; line-height:1.4;">✅</div>
+        <div style="font-weight:700; color:#10b981;">streak 3</div>
+        <div style="font-size:12px; color:#888;">🧊🧊 2 left</div>
+      </div>
+
+      <!-- Tue -->
+      <div style="text-align:center; min-width:92px;">
+        <div class="label" style="margin-bottom:6px;">Tue</div>
+        <div style="font-size:30px; line-height:1.4;">✅</div>
+        <div style="font-weight:700; color:#10b981;">streak 4</div>
+        <div style="font-size:12px; color:#888;">🧊🧊 2 left</div>
+      </div>
+
+      <!-- Wed -->
+      <div style="text-align:center; min-width:92px;">
+        <div class="label" style="margin-bottom:6px;">Wed</div>
+        <div style="font-size:30px; line-height:1.4;">✅</div>
+        <div style="font-weight:700; color:#10b981;">streak 5</div>
+        <div style="font-size:12px; color:#888;">🧊🧊 2 left</div>
+      </div>
+
+      <!-- Thu -->
+      <div style="text-align:center; min-width:92px; background:rgba(59,130,246,0.10); border-radius:10px; padding:6px 4px;">
+        <div class="label" style="margin-bottom:6px;">Thu</div>
+        <div style="font-size:30px; line-height:1.4;">❌→🧊</div>
+        <div style="font-weight:700; color:#3b82f6;">streak 5</div>
+        <div style="font-size:12px; color:#888;">🧊 1 left</div>
+      </div>
+
+      <!-- Fri -->
+      <div style="text-align:center; min-width:92px;">
+        <div class="label" style="margin-bottom:6px;">Fri</div>
+        <div style="font-size:30px; line-height:1.4;">✅</div>
+        <div style="font-weight:700; color:#10b981;">streak 6</div>
+        <div style="font-size:12px; color:#888;">🧊 1 left</div>
+      </div>
+
+    </div>
+    <p style="text-align:center; color:#888; font-size:13px; margin-top:4px;">
+      Thursday was missed → one freeze auto-applied → streak survived at 5 (it did <i>not</i> jump to 6).
+      Friday's lesson then continues the chain to 6.
+    </p>
+  </div>
+</div>
+
+<div class="section">
+  <span class="label">The rules baked into that picture</span>
+  <ul style="line-height:1.7;">
+    <li>🧊 A freeze is <b>auto-applied</b> the instant a gap is detected — the learner does nothing.</li>
+    <li>A frozen day <b>preserves</b> the streak but does <b>not</b> increment it (Thu stayed at 5).</li>
+    <li>Inventory is <b>capped</b> (assume max 2 for now) — you can't hoard infinite freezes.</li>
+    <li>Miss <b>more consecutive days than you have freezes</b> → the streak still breaks and resets.</li>
+    <li><b>No nightly job</b> (consistent with streaks today): the freeze is settled <i>lazily</i> — when the next lesson arrives, or when the streak is read.</li>
+  </ul>
+</div>
+
+<h3>Does this match what you have in mind?</h3>
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Yes — classic auto-freeze</h3>
+      <p>Exactly the behaviour above. Apply automatically, lazily, capped.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Same, but manual apply</h3>
+      <p>Learner explicitly chooses to spend a freeze rather than it happening automatically.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Mostly — but change a rule</h3>
+      <p>Close, but I want to tweak something (e.g. frozen day counts, different cap). I'll explain.</p>
+    </div>
+  </div>
+</div>
