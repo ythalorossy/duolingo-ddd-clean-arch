@@ -46,7 +46,11 @@ public sealed class LearnerStreak : AggregateRoot
             var consumed = Math.Min(gap, FreezeBalance);
             FreezeBalance -= consumed;
 
-            CurrentStreak = consumed == gap ? CurrentStreak + 1 : 1;
+            var survived = consumed == gap;
+            CurrentStreak = survived ? CurrentStreak + 1 : 1;
+
+            if (survived && consumed > 0)
+                RaiseDomainEvent(new StreakFrozen(Id.Value, consumed, day, occurredOnUtc));
         }
         else
         {

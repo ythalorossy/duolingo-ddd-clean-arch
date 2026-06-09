@@ -219,4 +219,36 @@ public class LearnerStreakTests
         Assert.Equal(StreakStatus.Active, r.Status);
         Assert.Equal(1, r.FreezesAvailable);
     }
+
+    [Fact]
+    public void Bridging_a_gap_raises_StreakFrozen_with_days_frozen()
+    {
+        var s = NewUtcLearner();
+        s.GrantFreeze();
+        s.RegisterQualifyingActivity(Noon(2030, 1, 1));
+        s.RegisterQualifyingActivity(Noon(2030, 1, 3)); // Jan 2 bridged
+
+        var frozen = Assert.Single(s.DomainEvents.OfType<StreakFrozen>());
+        Assert.Equal(1, frozen.DaysFrozen);
+        Assert.Equal(new DateOnly(2030, 1, 3), frozen.Date);
+    }
+
+    [Fact]
+    public void A_normal_consecutive_advance_raises_no_StreakFrozen()
+    {
+        var s = NewUtcLearner();
+        s.RegisterQualifyingActivity(Noon(2030, 1, 1));
+        s.RegisterQualifyingActivity(Noon(2030, 1, 2)); // consecutive, no freeze used
+        Assert.Empty(s.DomainEvents.OfType<StreakFrozen>());
+    }
+
+    [Fact]
+    public void A_reset_that_burns_freezes_raises_no_StreakFrozen()
+    {
+        var s = NewUtcLearner();
+        s.GrantFreeze();                                // 1 freeze, gap will be 2
+        s.RegisterQualifyingActivity(Noon(2030, 1, 1));
+        s.RegisterQualifyingActivity(Noon(2030, 1, 4)); // burns the freeze but still resets
+        Assert.Empty(s.DomainEvents.OfType<StreakFrozen>());
+    }
 }
