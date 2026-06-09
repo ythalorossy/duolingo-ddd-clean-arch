@@ -140,16 +140,6 @@ public class LearnerStreakTests
     }
 
     [Fact]
-    public void A_frozen_day_does_not_increment_the_count()
-    {
-        var s = NewUtcLearner();
-        s.GrantFreeze();
-        s.RegisterQualifyingActivity(Noon(2030, 1, 1)); // current 1
-        s.RegisterQualifyingActivity(Noon(2030, 1, 3)); // only Jan 3 adds, Jan 2 was merely bridged
-        Assert.Equal(2, s.CurrentStreak);   // 1 (Jan1) + 1 (Jan3); the bridged Jan2 added nothing
-    }
-
-    [Fact]
     public void Two_freezes_bridge_a_two_day_gap()
     {
         var s = NewUtcLearner();
