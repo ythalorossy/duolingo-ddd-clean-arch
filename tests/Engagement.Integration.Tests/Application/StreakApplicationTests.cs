@@ -70,4 +70,31 @@ public class StreakApplicationTests
         Assert.Equal("None", dto.Status);
         Assert.Equal(0, dto.CurrentStreak);
     }
+
+    [Fact]
+    public async Task Grant_creates_streak_and_adds_a_freeze()
+    {
+        var repo = new InMemoryStreaks();
+        var handler = new GrantStreakFreezeHandler(repo);
+        var learnerId = Guid.NewGuid();
+
+        await handler.HandleAsync(new GrantStreakFreeze(learnerId), CancellationToken.None);
+
+        var s = await repo.GetAsync(new LearnerId(learnerId), CancellationToken.None);
+        Assert.Equal(1, s!.FreezeBalance);
+    }
+
+    [Fact]
+    public async Task Grant_respects_the_cap()
+    {
+        var repo = new InMemoryStreaks();
+        var handler = new GrantStreakFreezeHandler(repo);
+        var learnerId = Guid.NewGuid();
+
+        for (var i = 0; i < 5; i++)
+            await handler.HandleAsync(new GrantStreakFreeze(learnerId), CancellationToken.None);
+
+        var s = await repo.GetAsync(new LearnerId(learnerId), CancellationToken.None);
+        Assert.Equal(LearnerStreak.MaxFreezes, s!.FreezeBalance);
+    }
 }
