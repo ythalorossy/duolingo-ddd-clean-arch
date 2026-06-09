@@ -28,7 +28,9 @@ public sealed class LineNumberOrderer : ITestCaseOrderer
         if (testCase.TestMethod.Method is ReflectionMethodInfo reflMethod)
             return reflMethod.MethodInfo.MetadataToken;
 
-        // Fallback: alphabetical by method name (avoids non-determinism).
-        return testCase.TestMethod.Method.Name.GetHashCode();
+        // Fallback (non-reflection runners only): return a constant so the ThenBy(name)
+        // clause in OrderTestCases breaks ties alphabetically — deterministic, unlike
+        // string.GetHashCode(), which is randomized per process on .NET Core.
+        return 0;
     }
 }

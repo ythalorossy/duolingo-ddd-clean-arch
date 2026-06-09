@@ -7,6 +7,8 @@ using Xunit;
 
 namespace Engagement.Integration.Tests.EndToEnd;
 
+// NOTE: the orderer is referenced by string (type + assembly name). If LineNumberOrderer
+// is renamed/moved, ordering silently breaks at runtime with no compile error — keep in sync.
 [TestCaseOrderer("Engagement.Integration.Tests.EndToEnd.LineNumberOrderer",
                  "Engagement.Integration.Tests")]
 public class StreakApiTests(StreakApiFactory factory) : IClassFixture<StreakApiFactory>
@@ -123,7 +125,7 @@ public class StreakApiTests(StreakApiFactory factory) : IClassFixture<StreakApiF
             Assert.Equal(HttpStatusCode.OK, (await client.PostAsync("/me/streak-freezes", null)).StatusCode);
 
         // No qualifying activity yet → status None, but the capped balance is visible.
-        factory.Clock.SetUtcNow(Noon(2030, 3, 1));
+        factory.Clock.SetUtcNow(Noon(2030, 3, 1).AddHours(1));
         var dto = await client.GetFromJsonAsync<StreakResponse>("/me/streak");
         Assert.Equal("None", dto!.Status);
         Assert.Equal(2, dto.FreezesAvailable);
