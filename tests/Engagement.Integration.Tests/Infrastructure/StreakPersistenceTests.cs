@@ -26,6 +26,28 @@ public class StreakPersistenceTests
     }
 
     [Fact]
+    public async Task Freeze_balance_round_trips()
+    {
+        var id = new LearnerId(Guid.NewGuid());
+
+        await using (var ctx = NewContext())
+        {
+            var repo = new LearnerStreakRepository(ctx);
+            var s = LearnerStreak.Create(id);
+            s.GrantFreeze();
+            s.GrantFreeze();
+            await repo.AddAsync(s, CancellationToken.None);
+            await repo.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using (var ctx = NewContext())
+        {
+            var reloaded = await new LearnerStreakRepository(ctx).GetAsync(id, CancellationToken.None);
+            Assert.Equal(2, reloaded!.FreezeBalance);
+        }
+    }
+
+    [Fact]
     public async Task Streak_round_trips_with_timezone_and_dateonly()
     {
         var id = new LearnerId(Guid.NewGuid());
