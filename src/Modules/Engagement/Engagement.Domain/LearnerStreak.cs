@@ -70,6 +70,7 @@ public sealed class LearnerStreak : AggregateRoot
         if (LastQualifyingDate is not { } last)
             return new StreakReport(StreakStatus.None, 0, LongestStreak, FreezeBalance);
 
+        // today == last is "active today"; today < last (stale clock / skew) is also safe as Active with the real balance.
         if (today <= last)
             return new StreakReport(StreakStatus.Active, CurrentStreak, LongestStreak, FreezeBalance);
 
