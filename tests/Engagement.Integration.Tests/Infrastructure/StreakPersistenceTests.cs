@@ -43,6 +43,7 @@ public class StreakPersistenceTests
         await using (var ctx = NewContext())
         {
             var reloaded = await new LearnerStreakRepository(ctx).GetAsync(id, CancellationToken.None);
+            Assert.NotNull(reloaded);
             Assert.Equal(2, reloaded!.FreezeBalance);
         }
     }
