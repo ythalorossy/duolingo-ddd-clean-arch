@@ -112,8 +112,13 @@ public class LearnerStreakTests
     public void Freeze_balance_is_clamped_at_the_cap()
     {
         var s = NewUtcLearner();
-        for (var i = 0; i < 5; i++) s.GrantFreeze();
+        for (var i = 0; i < LearnerStreak.MaxFreezes * 2 + 1; i++) s.GrantFreeze();
         Assert.Equal(LearnerStreak.MaxFreezes, s.FreezeBalance);
+    }
+
+    [Fact]
+    public void Freeze_cap_is_two_by_policy()
+    {
         Assert.Equal(2, LearnerStreak.MaxFreezes);
     }
 
