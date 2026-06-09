@@ -252,4 +252,20 @@ public class LearnerStreakTests
         s.RegisterQualifyingActivity(Noon(2030, 1, 4)); // burns the freeze but still resets
         Assert.Empty(s.DomainEvents.OfType<StreakFrozen>());
     }
+
+    [Fact]
+    public void Re_delivered_bridge_event_does_not_double_consume_a_freeze()
+    {
+        var s = NewUtcLearner();
+        s.GrantFreeze();
+        s.RegisterQualifyingActivity(Noon(2030, 1, 1));   // current 1
+        s.RegisterQualifyingActivity(Noon(2030, 1, 3));   // Jan 2 missed → freeze bridges it: current 2, balance 0
+
+        // Re-deliver the SAME bridging completion (same local day) — must be an idempotent no-op,
+        // not a second consumption.
+        s.RegisterQualifyingActivity(Noon(2030, 1, 3));
+
+        Assert.Equal(2, s.CurrentStreak);
+        Assert.Equal(0, s.FreezeBalance);
+    }
 }
