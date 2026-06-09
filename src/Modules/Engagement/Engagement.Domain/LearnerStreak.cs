@@ -40,7 +40,13 @@ public sealed class LearnerStreak : AggregateRoot
             if (day <= last)
                 return; // same day (idempotent) or late/out-of-order
 
-            CurrentStreak = day == last.AddDays(1) ? CurrentStreak + 1 : 1; // continue or reset
+            // One freeze is burned per missed day, up to what's held.
+            // The streak survives only if freezes cover the WHOLE gap.
+            var gap = GapBetween(last, day);
+            var consumed = Math.Min(gap, FreezeBalance);
+            FreezeBalance -= consumed;
+
+            CurrentStreak = consumed == gap ? CurrentStreak + 1 : 1;
         }
         else
         {
@@ -53,6 +59,11 @@ public sealed class LearnerStreak : AggregateRoot
 
         RaiseDomainEvent(new StreakAdvanced(Id.Value, CurrentStreak, day, occurredOnUtc));
     }
+
+    // Whole days missed strictly between two local dates (0 when consecutive).
+    // Only meaningful for to > from, which is the only caller context.
+    private static int GapBetween(DateOnly from, DateOnly to) =>
+        to.DayNumber - from.DayNumber - 1;
 
     public StreakReport Report(DateOnly today)
     {

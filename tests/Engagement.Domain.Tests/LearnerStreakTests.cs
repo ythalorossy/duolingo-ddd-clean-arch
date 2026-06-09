@@ -127,4 +127,70 @@ public class LearnerStreakTests
     {
         Assert.Equal(0, NewUtcLearner().FreezeBalance);
     }
+
+    [Fact]
+    public void One_freeze_bridges_a_single_missed_day_and_streak_continues()
+    {
+        var s = NewUtcLearner();
+        s.GrantFreeze();
+        s.RegisterQualifyingActivity(Noon(2030, 1, 1)); // current 1
+        s.RegisterQualifyingActivity(Noon(2030, 1, 3)); // Jan 2 missed → freeze bridges it
+        Assert.Equal(2, s.CurrentStreak);   // continued, NOT reset
+        Assert.Equal(0, s.FreezeBalance);   // the freeze was consumed
+    }
+
+    [Fact]
+    public void A_frozen_day_does_not_increment_the_count()
+    {
+        var s = NewUtcLearner();
+        s.GrantFreeze();
+        s.RegisterQualifyingActivity(Noon(2030, 1, 1)); // current 1
+        s.RegisterQualifyingActivity(Noon(2030, 1, 3)); // only Jan 3 adds, Jan 2 was merely bridged
+        Assert.Equal(2, s.CurrentStreak);   // 1 (Jan1) + 1 (Jan3); the bridged Jan2 added nothing
+    }
+
+    [Fact]
+    public void Two_freezes_bridge_a_two_day_gap()
+    {
+        var s = NewUtcLearner();
+        s.GrantFreeze();
+        s.GrantFreeze();
+        s.RegisterQualifyingActivity(Noon(2030, 1, 1));
+        s.RegisterQualifyingActivity(Noon(2030, 1, 4)); // Jan 2 + Jan 3 missed → both bridged
+        Assert.Equal(2, s.CurrentStreak);
+        Assert.Equal(0, s.FreezeBalance);
+    }
+
+    [Fact]
+    public void Gap_larger_than_balance_resets_and_burns_all_freezes()
+    {
+        var s = NewUtcLearner();
+        s.GrantFreeze();                                 // only 1 freeze
+        s.RegisterQualifyingActivity(Noon(2030, 1, 1));
+        s.RegisterQualifyingActivity(Noon(2030, 1, 4)); // 2-day gap, only 1 freeze → reset
+        Assert.Equal(1, s.CurrentStreak);
+        Assert.Equal(0, s.FreezeBalance);                // the freeze was burned trying
+    }
+
+    [Fact]
+    public void Same_day_does_not_consume_a_freeze()
+    {
+        var s = NewUtcLearner();
+        s.GrantFreeze();
+        s.RegisterQualifyingActivity(Noon(2030, 1, 1));
+        s.RegisterQualifyingActivity(new DateTimeOffset(2030, 1, 1, 20, 0, 0, TimeSpan.Zero));
+        Assert.Equal(1, s.FreezeBalance);                // untouched
+    }
+
+    [Fact]
+    public void Longest_survives_a_freeze_bridge()
+    {
+        var s = NewUtcLearner();
+        s.GrantFreeze();
+        s.RegisterQualifyingActivity(Noon(2030, 1, 1));
+        s.RegisterQualifyingActivity(Noon(2030, 1, 2)); // current 2, longest 2
+        s.RegisterQualifyingActivity(Noon(2030, 1, 4)); // Jan 3 bridged → current 3
+        Assert.Equal(3, s.CurrentStreak);
+        Assert.Equal(3, s.LongestStreak);
+    }
 }
