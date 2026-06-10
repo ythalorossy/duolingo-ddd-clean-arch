@@ -194,6 +194,184 @@ classDiagram
 - The **gap helper** (e.g. `private static int GapBefore(DateOnly from, DateOnly to)`) is the
   single source of the `(to - from).Days - 1` computation used by both methods.
 
+## As-built class relationships
+
+Captured from the implemented code (the helper shipped as `GapBetween`; events carry the
+`IDomainEvent` `OccurredOn` member, matching the existing `StreakAdvanced`/`XpAwarded`
+convention). Two views: the domain model, then the cross-layer wiring that shows the
+Dependency Rule.
+
+### Domain model
+
+```mermaid
+classDiagram
+    direction TB
+
+    class AggregateRoot {
+        <<abstract>>
+        +IReadOnlyCollection~IDomainEvent~ DomainEvents
+        #RaiseDomainEvent(IDomainEvent) void
+        +ClearDomainEvents() void
+    }
+    class ValueObject {
+        <<abstract>>
+        #GetEqualityComponents() IEnumerable
+    }
+    class IDomainEvent {
+        <<interface>>
+        +DateTimeOffset OccurredOn
+    }
+
+    class LearnerStreak {
+        +LearnerId Id
+        +LearnerTimeZone TimeZone
+        +int CurrentStreak
+        +int LongestStreak
+        +DateOnly? LastQualifyingDate
+        +int FreezeBalance
+        +const int MaxFreezes = 2
+        +Create(LearnerId)$ LearnerStreak
+        +GrantFreeze() void
+        +ChangeTimeZone(LearnerTimeZone) void
+        +RegisterQualifyingActivity(DateTimeOffset) void
+        +Report(DateOnly today) StreakReport
+        -GapBetween(DateOnly, DateOnly)$ int
+    }
+    class LearnerId {
+        +Guid Value
+    }
+    class LearnerTimeZone {
+        +string IanaId
+        +Utc$ LearnerTimeZone
+        +LocalDateOf(DateTimeOffset) DateOnly
+    }
+    class StreakReport {
+        <<record>>
+        +StreakStatus Status
+        +int CurrentStreak
+        +int LongestStreak
+        +int FreezesAvailable
+    }
+    class StreakStatus {
+        <<enumeration>>
+        None
+        Broken
+        AtRisk
+        Active
+    }
+    class StreakAdvanced {
+        <<record>>
+        +Guid LearnerId
+        +int CurrentStreak
+        +DateOnly Date
+        +DateTimeOffset OccurredOn
+    }
+    class StreakFrozen {
+        <<record>>
+        +Guid LearnerId
+        +int FreezesConsumed
+        +DateOnly Date
+        +DateTimeOffset OccurredOn
+    }
+
+    AggregateRoot <|-- LearnerStreak
+    ValueObject   <|-- LearnerId
+    ValueObject   <|-- LearnerTimeZone
+    IDomainEvent  <|.. StreakAdvanced
+    IDomainEvent  <|.. StreakFrozen
+    AggregateRoot o-- "0..*" IDomainEvent : holds
+
+    LearnerStreak *-- LearnerId : Id
+    LearnerStreak *-- LearnerTimeZone : TimeZone
+    LearnerStreak ..> StreakReport : produces (Report)
+    LearnerStreak ..> StreakAdvanced : raises
+    LearnerStreak ..> StreakFrozen : raises
+    StreakReport  *-- StreakStatus : Status
+```
+
+### Cross-layer wiring (handlers, repository port, EF adapter)
+
+```mermaid
+classDiagram
+    direction LR
+
+    class IRequestHandler~TReq_TRes~ {
+        <<interface · Mediator>>
+    }
+    class INotificationHandler~T~ {
+        <<interface · Mediator>>
+    }
+    class LessonCompleted {
+        <<INotification · Contracts>>
+    }
+
+    class ILearnerStreakRepository {
+        <<interface · Domain>>
+        +GetAsync(LearnerId) LearnerStreak?
+        +AddAsync(LearnerStreak) Task
+        +SaveChangesAsync() Task
+    }
+    class LearnerStreak {
+        <<AggregateRoot · Domain>>
+    }
+
+    class GrantStreakFreezeHandler {
+        <<Application>>
+    }
+    class SetLearnerTimeZoneHandler {
+        <<Application>>
+    }
+    class GetLearnerStreakHandler {
+        <<Application>>
+    }
+    class RegisterStreakForLessonCompletedHandler {
+        <<Application>>
+    }
+    class StreakDto {
+        <<record · Application>>
+    }
+
+    class LearnerStreakRepository {
+        <<Infrastructure>>
+    }
+    class EngagementDbContext {
+        <<Infrastructure>>
+    }
+    class LearnerStreakConfiguration {
+        <<Infrastructure>>
+    }
+
+    GrantStreakFreezeHandler ..|> IRequestHandler~TReq_TRes~
+    SetLearnerTimeZoneHandler ..|> IRequestHandler~TReq_TRes~
+    GetLearnerStreakHandler ..|> IRequestHandler~TReq_TRes~
+    RegisterStreakForLessonCompletedHandler ..|> INotificationHandler~T~
+    RegisterStreakForLessonCompletedHandler ..> LessonCompleted : handles
+
+    GrantStreakFreezeHandler ..> ILearnerStreakRepository
+    SetLearnerTimeZoneHandler ..> ILearnerStreakRepository
+    GetLearnerStreakHandler ..> ILearnerStreakRepository
+    RegisterStreakForLessonCompletedHandler ..> ILearnerStreakRepository
+
+    GrantStreakFreezeHandler ..> LearnerStreak : GrantFreeze()
+    SetLearnerTimeZoneHandler ..> LearnerStreak : ChangeTimeZone()
+    RegisterStreakForLessonCompletedHandler ..> LearnerStreak : RegisterQualifyingActivity()
+    GetLearnerStreakHandler ..> LearnerStreak : Report()
+    GetLearnerStreakHandler ..> StreakDto : returns
+
+    LearnerStreakRepository ..|> ILearnerStreakRepository : implements
+    LearnerStreakRepository ..> EngagementDbContext
+    LearnerStreakConfiguration ..> LearnerStreak : maps (EF)
+```
+
+**What the relationships show.** `LearnerStreak` *is an* `AggregateRoot` and **composes** the
+value objects `LearnerId` and `LearnerTimeZone`; it **produces** the `StreakReport` projection
+and **raises** the `StreakAdvanced` / `StreakFrozen` domain events (collected by the base
+`DomainEvents`). Every Application handler depends *inward* on `ILearnerStreakRepository` — an
+interface owned by the **Domain** — while Infrastructure's `LearnerStreakRepository` *implements*
+it and `LearnerStreakConfiguration` maps the aggregate. That dependency inversion keeps the
+domain free of EF/ASP.NET: the arrows point inward, never out. The handlers stay thin (load →
+one aggregate method → save); the behaviour lives in the aggregate.
+
 ## Components
 
 ### Domain (`Engagement.Domain`)
