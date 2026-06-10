@@ -56,6 +56,13 @@ app.MapGet("/me/streak",
     async (ICurrentUser user, IMediator mediator, CancellationToken ct) =>
         Results.Ok(await mediator.SendAsync(new GetLearnerStreak(user.LearnerId), ct)));
 
+app.MapPost("/me/streak-freezes",
+    async (ICurrentUser user, IMediator mediator, CancellationToken ct) =>
+    {
+        await mediator.SendAsync(new GrantStreakFreeze(user.LearnerId), ct);
+        return Results.Ok();
+    });
+
 app.Run();
 
 // Exposes the implicit Program class to WebApplicationFactory in tests.

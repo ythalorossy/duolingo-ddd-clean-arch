@@ -10,6 +10,10 @@ public sealed class LearnerStreak : AggregateRoot
     public int LongestStreak { get; private set; }
     public DateOnly? LastQualifyingDate { get; private set; }
 
+    public int FreezeBalance { get; private set; }
+
+    public const int MaxFreezes = 2;
+
     private LearnerStreak() { } // EF
 
     public static LearnerStreak Create(LearnerId id) => new()
@@ -24,6 +28,9 @@ public sealed class LearnerStreak : AggregateRoot
         TimeZone = timeZone;
     }
 
+    public void GrantFreeze() =>
+        FreezeBalance = Math.Min(FreezeBalance + 1, MaxFreezes);
+
     public void RegisterQualifyingActivity(DateTimeOffset occurredOnUtc)
     {
         var day = TimeZone.LocalDateOf(occurredOnUtc);
@@ -33,7 +40,18 @@ public sealed class LearnerStreak : AggregateRoot
             if (day <= last)
                 return; // same day (idempotent) or late/out-of-order
 
-            CurrentStreak = day == last.AddDays(1) ? CurrentStreak + 1 : 1; // continue or reset
+            // One freeze is burned per missed day, up to what's held.
+            // The streak survives only if freezes cover the WHOLE gap.
+            var gap = GapBetween(last, day);
+            var consumed = Math.Min(gap, FreezeBalance);
+            FreezeBalance -= consumed;
+
+            var survived = consumed == gap;
+            CurrentStreak = survived ? CurrentStreak + 1 : 1;
+
+            // survived = gap fully covered; consumed > 0 = at least one freeze was actually spent.
+            if (survived && consumed > 0)
+                RaiseDomainEvent(new StreakFrozen(Id.Value, consumed, day, occurredOnUtc));
         }
         else
         {
@@ -47,14 +65,26 @@ public sealed class LearnerStreak : AggregateRoot
         RaiseDomainEvent(new StreakAdvanced(Id.Value, CurrentStreak, day, occurredOnUtc));
     }
 
+    // Whole days missed strictly between two local dates (0 when consecutive).
+    // Only meaningful for to > from, which is the only caller context.
+    private static int GapBetween(DateOnly from, DateOnly to) =>
+        to.DayNumber - from.DayNumber - 1;
+
     public StreakReport Report(DateOnly today)
     {
         if (LastQualifyingDate is not { } last)
-            return new StreakReport(StreakStatus.None, 0, LongestStreak);
-        if (last == today)
-            return new StreakReport(StreakStatus.Active, CurrentStreak, LongestStreak);
-        if (last == today.AddDays(-1))
-            return new StreakReport(StreakStatus.AtRisk, CurrentStreak, LongestStreak);
-        return new StreakReport(StreakStatus.Broken, 0, LongestStreak);
+            return new StreakReport(StreakStatus.None, 0, LongestStreak, FreezeBalance);
+
+        // today == last is "active today"; today < last (stale clock / skew) is also safe as Active with the real balance.
+        if (today <= last)
+            return new StreakReport(StreakStatus.Active, CurrentStreak, LongestStreak, FreezeBalance);
+
+        // Project the same rule the write path applies — without mutating.
+        var gap = GapBetween(last, today);
+        var consumed = Math.Min(gap, FreezeBalance);
+
+        return consumed == gap
+            ? new StreakReport(StreakStatus.AtRisk, CurrentStreak, LongestStreak, FreezeBalance - consumed)
+            : new StreakReport(StreakStatus.Broken, 0, LongestStreak, FreezeBalance - consumed);
     }
 }

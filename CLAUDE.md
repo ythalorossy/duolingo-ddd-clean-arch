@@ -119,5 +119,10 @@ implementation**. Each sub-project gets its own branch (`feat/<name>`) and PR.
   a derived `LearnerStreak` aggregate reacting to `LessonCompleted`; renamed
   `LearnerEngagement` → `XpAccount`. Also fixed a latent slice-1 bug (owned `AppliedAward`
   now uses a store-generated key so re-awards INSERT instead of UPDATE).
-- ⏭️ **Next:** streak freeze (inventory + auto-apply, plugging into the gap case) → leagues →
-  real Learning engine → real Identity.
+- ✅ **Sub-project 3 — Streak freeze** (PR #3): auto-applied, lazily-settled, capped freeze on
+  `LearnerStreak`. One rule — `consumed = min(gap, FreezeBalance)`, survive ⇔ `consumed == gap` —
+  shared by the write path and the pure read projection. Abstract `GrantStreakFreeze` acquisition
+  seam (`POST /me/streak-freezes`); no nightly job; idempotency preserved via advancing
+  `LastQualifyingDate`. Raises a (subscriber-less) `StreakFrozen` event.
+- ⏭️ **Next:** leagues → real Learning engine → real Identity (and a real freeze economy —
+  earning/buying — when Billing exists).

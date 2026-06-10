@@ -7,9 +7,13 @@ using Xunit;
 
 namespace Engagement.Integration.Tests.EndToEnd;
 
+// NOTE: the orderer is referenced by string (type + assembly name). If LineNumberOrderer
+// is renamed/moved, ordering silently breaks at runtime with no compile error — keep in sync.
+[TestCaseOrderer("Engagement.Integration.Tests.EndToEnd.LineNumberOrderer",
+                 "Engagement.Integration.Tests")]
 public class StreakApiTests(StreakApiFactory factory) : IClassFixture<StreakApiFactory>
 {
-    private sealed record StreakResponse(Guid LearnerId, int CurrentStreak, int LongestStreak, string Status, DateOnly? LastQualifyingDate);
+    private sealed record StreakResponse(Guid LearnerId, int CurrentStreak, int LongestStreak, string Status, DateOnly? LastQualifyingDate, int FreezesAvailable);
 
     private HttpClient ClientFor(Guid learnerId)
     {
@@ -85,5 +89,45 @@ public class StreakApiTests(StreakApiFactory factory) : IClassFixture<StreakApiF
         Assert.Equal(1, dto!.CurrentStreak);
         Assert.Equal("Active", dto.Status);
         Assert.Equal(new DateOnly(2030, 1, 7), dto.LastQualifyingDate);
+    }
+
+    [Fact]
+    public async Task Streak_freeze_preserves_streak_across_a_missed_day()
+    {
+        var learner = Guid.NewGuid();
+        var client = ClientFor(learner);
+
+        var grant = await client.PostAsync("/me/streak-freezes", null);
+        Assert.Equal(HttpStatusCode.OK, grant.StatusCode);
+
+        factory.Clock.SetUtcNow(Noon(2030, 2, 1).AddHours(1));
+        await CompleteLessonOn(learner, Noon(2030, 2, 1));
+        factory.Clock.SetUtcNow(Noon(2030, 2, 2).AddHours(1));
+        await CompleteLessonOn(learner, Noon(2030, 2, 2));
+
+        // Skip Feb 3. Feb 4 completion → the freeze bridges Feb 3, streak survives to 3.
+        factory.Clock.SetUtcNow(Noon(2030, 2, 4).AddHours(1));
+        await CompleteLessonOn(learner, Noon(2030, 2, 4));
+
+        var dto = await client.GetFromJsonAsync<StreakResponse>("/me/streak");
+        Assert.Equal(3, dto!.CurrentStreak);
+        Assert.Equal("Active", dto.Status);
+        Assert.Equal(0, dto.FreezesAvailable); // the freeze was consumed bridging Feb 3
+    }
+
+    [Fact]
+    public async Task Granting_beyond_the_cap_is_clamped()
+    {
+        var learner = Guid.NewGuid();
+        var client = ClientFor(learner);
+
+        for (var i = 0; i < 5; i++)
+            Assert.Equal(HttpStatusCode.OK, (await client.PostAsync("/me/streak-freezes", null)).StatusCode);
+
+        // No qualifying activity yet → status None, but the capped balance is visible.
+        factory.Clock.SetUtcNow(Noon(2030, 3, 1).AddHours(1));
+        var dto = await client.GetFromJsonAsync<StreakResponse>("/me/streak");
+        Assert.Equal("None", dto!.Status);
+        Assert.Equal(2, dto.FreezesAvailable);
     }
 }

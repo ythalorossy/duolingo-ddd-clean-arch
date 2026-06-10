@@ -6,7 +6,7 @@ namespace Engagement.Application;
 public sealed record GetLearnerStreak(Guid LearnerId) : IRequest<StreakDto>;
 
 public sealed record StreakDto(
-    Guid LearnerId, int CurrentStreak, int LongestStreak, string Status, DateOnly? LastQualifyingDate);
+    Guid LearnerId, int CurrentStreak, int LongestStreak, string Status, DateOnly? LastQualifyingDate, int FreezesAvailable);
 
 public sealed class GetLearnerStreakHandler(ILearnerStreakRepository repository, TimeProvider clock)
     : IRequestHandler<GetLearnerStreak, StreakDto>
@@ -15,11 +15,11 @@ public sealed class GetLearnerStreakHandler(ILearnerStreakRepository repository,
     {
         var streak = await repository.GetAsync(new LearnerId(request.LearnerId), ct);
         if (streak is null)
-            return new StreakDto(request.LearnerId, 0, 0, nameof(StreakStatus.None), null);
+            return new StreakDto(request.LearnerId, 0, 0, nameof(StreakStatus.None), null, 0);
 
         var today = streak.TimeZone.LocalDateOf(clock.GetUtcNow());
         var report = streak.Report(today);
         return new StreakDto(request.LearnerId, report.CurrentStreak, report.LongestStreak,
-            report.Status.ToString(), streak.LastQualifyingDate);
+            report.Status.ToString(), streak.LastQualifyingDate, report.FreezesAvailable);
     }
 }

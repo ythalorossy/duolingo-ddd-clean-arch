@@ -1,0 +1,62 @@
+<h2>Design §1 — the core model (one uniform rule)</h2>
+<p class="subtitle">The whole feature collapses into a single idea that drives <b>both</b> the write path and the read projection. No special "partial gap" policy needed — it falls out for free.</p>
+
+<div class="mockup">
+  <div class="mockup-header">The rule</div>
+  <div class="mockup-body" style="text-align:center;">
+    <div style="font-size:18px; font-family:monospace; background:rgba(16,185,129,0.08); border-radius:10px; padding:14px;">
+      gap&nbsp;=&nbsp;whole days missed between lastDate and the date<br>
+      <b style="color:#10b981;">consumed = min(gap, FreezeBalance)</b><br>
+      streak&nbsp;survives&nbsp;⇔&nbsp;<b style="color:#10b981;">consumed == gap</b>
+    </div>
+    <p style="font-size:13px; color:#aaa; margin-top:8px;">
+      One freeze burned per missed day, up to what you hold. Cover the whole gap → streak lives.
+      Run out partway → all remaining freezes burn and the streak still resets. (Faithful to Duolingo,
+      and there's no separate policy to decide.)
+    </p>
+  </div>
+</div>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">WRITE — RegisterQualifyingActivity(day D)</div>
+    <div class="mockup-body">
+      <table style="width:100%; border-collapse:collapse; font-size:12.5px;">
+        <tr style="border-bottom:1px solid #444;"><th style="text-align:left; padding:4px;">Condition</th><th style="text-align:left;">Effect</th></tr>
+        <tr style="border-bottom:1px solid #333;"><td style="padding:4px;">lastDate null</td><td>current=1</td></tr>
+        <tr style="border-bottom:1px solid #333;"><td style="padding:4px;">D ≤ last</td><td>no-op (idempotent / late)</td></tr>
+        <tr style="border-bottom:1px solid #333;"><td style="padding:4px;">gap=0 (D=last+1)</td><td>current += 1</td></tr>
+        <tr style="border-bottom:1px solid #333;"><td style="padding:4px;">gap≥1, balance ≥ gap</td><td><b style="color:#10b981;">balance −= gap; current += 1</b></td></tr>
+        <tr><td style="padding:4px;">gap≥1, balance &lt; gap</td><td><b style="color:#f59e0b;">balance = 0; current = 1</b></td></tr>
+      </table>
+      <p style="font-size:12px; color:#888; margin-top:8px;">then lastDate=D; longest=max(longest,current); raise StreakAdvanced (+ StreakFrozen if consumed&gt;0). <b>Persisted.</b></p>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">READ — Report(today) &nbsp;·&nbsp; pure, no mutation</div>
+    <div class="mockup-body">
+      <table style="width:100%; border-collapse:collapse; font-size:12.5px;">
+        <tr style="border-bottom:1px solid #444;"><th style="text-align:left; padding:4px;">today vs last</th><th style="text-align:left;">Status</th></tr>
+        <tr style="border-bottom:1px solid #333;"><td style="padding:4px;">today = last</td><td>Active (current)</td></tr>
+        <tr style="border-bottom:1px solid #333;"><td style="padding:4px;">gap=0 (last=yesterday)</td><td>AtRisk (current)</td></tr>
+        <tr style="border-bottom:1px solid #333;"><td style="padding:4px;">gap≥1, balance ≥ gap</td><td><b style="color:#10b981;">AtRisk; freezes=balance−gap</b></td></tr>
+        <tr><td style="padding:4px;">gap≥1, balance &lt; gap</td><td><b style="color:#ef4444;">Broken (0)</b></td></tr>
+      </table>
+      <p style="font-size:12px; color:#888; margin-top:8px;">Same gap math as the write — so what you <i>see</i> before studying is exactly what gets <i>persisted</i> when you do.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <span class="label">Why this stays "derived, no nightly job"</span>
+  <p style="font-size:13.5px; color:#bbb; line-height:1.6;">
+    The stored <code>FreezeBalance</code> is <b>only</b> decremented by a real qualifying activity. A read
+    never mutates — it <i>projects</i> "balance − consumed" against today. Miss Thu with 2 freezes:
+    Friday's read shows <b>AtRisk, 1 freeze left</b> (Thu projected as covered) without writing anything;
+    Friday's lesson then persists exactly that (balance 2→1, current +1). If you never come back, each read
+    just recomputes against an ever-larger gap until it shows Broken. Stored state stays put; the projection does the work.
+  </p>
+</div>
+
+<p class="subtitle" style="margin-top:14px;">Cap = <b>2</b> freezes (a domain constant, easily tuned). Look right? Reply in the terminal — next I'll cover components, then errors/edge-cases, then tests.</p>

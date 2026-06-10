@@ -24,6 +24,7 @@ internal sealed class LearnerStreakConfiguration : IEntityTypeConfiguration<Lear
         builder.Property(s => s.CurrentStreak);
         builder.Property(s => s.LongestStreak);
         builder.Property(s => s.LastQualifyingDate); // DateOnly? -> nullable date column
+        builder.Property(s => s.FreezeBalance);
 
         builder.Ignore(s => s.DomainEvents);
     }
