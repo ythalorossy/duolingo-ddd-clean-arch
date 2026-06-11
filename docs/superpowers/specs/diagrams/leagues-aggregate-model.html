@@ -1,0 +1,68 @@
+<h2>What is the aggregate?</h2>
+<p class="subtitle">The leaderboard is "everyone in my tier, this week, ranked by weekly XP." Two very different ways to model that — and the difference shows up as a <strong>write-contention trap</strong>.</p>
+
+<div class="split">
+
+  <!-- OPTION A: per-learner standing -->
+  <div class="mockup" style="outline:2px solid #34a853;outline-offset:1px;">
+    <div class="mockup-header" style="color:#0b8043;">A · Per-learner <code>LeagueStanding</code> &nbsp;★ recommended</div>
+    <div class="mockup-body" style="padding:14px;color:#1a1a1a;font-size:13px;">
+      <div style="background:#f6f0fb;border:1px solid #9966cc;border-radius:6px;padding:10px;margin-bottom:10px;">
+        <strong>LeagueStanding</strong> <span style="color:#888;">(aggregate · one per learner)</span>
+        <ul style="margin:6px 0 0;padding-left:18px;line-height:1.5;">
+          <li><code>Id</code> : LearnerId</li>
+          <li><code>Tier</code> : LeagueTier <span style="color:#888;">(Bronze…Diamond — all Bronze in Slice 1)</span></li>
+          <li><code>Week</code> : LeagueWeek <span style="color:#888;">(the UTC Monday)</span></li>
+          <li><code>WeeklyXp</code> : Xp</li>
+        </ul>
+        <div style="margin-top:6px;color:#555;"><code>RecordXp(amount, whenUtc)</code> → lazy-rolls the week (reset if Week is stale) then adds. Same lazy-settle trick as <code>LearnerStreak</code>.</div>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <span style="background:#fff;border:1px solid #cfcfd6;border-radius:5px;padding:4px 8px;">Ana · 980</span>
+        <span style="background:#fff;border:1px solid #cfcfd6;border-radius:5px;padding:4px 8px;">Bruno · 910</span>
+        <span style="background:#fff;border:1px solid #cfcfd6;border-radius:5px;padding:4px 8px;">Chen · 845</span>
+        <span style="color:#888;align-self:center;">…each its own small row</span>
+      </div>
+      <div style="background:#eef9ff;border:1px solid #56c5e8;border-radius:6px;padding:8px;">
+        <strong>Leaderboard = read-model query</strong><br>
+        <code style="font-size:12px;">standings WHERE Tier=mine AND Week=now ORDER BY WeeklyXp DESC</code>
+        <div style="color:#555;margin-top:4px;">CQRS read, like <code>GetLearnerStreak</code>. No cross-aggregate JOIN — one filtered read of the standings table.</div>
+      </div>
+      <p style="margin:10px 0 0;font-size:12.5px;color:#0b8043;"><strong>Wins:</strong> small, uncontended writes · mirrors <code>LearnerStreak</code> exactly · idempotent &amp; simple.</p>
+      <p style="margin:4px 0 0;font-size:12px;color:#888;">Slice-2 consequence: settlement is a <em>cross-aggregate process</em> (rank the query, update each standing) — which is the cohort-wide-settlement problem we already earmarked for Slice 2.</p>
+    </div>
+  </div>
+
+  <!-- OPTION B: cohort aggregate -->
+  <div class="mockup">
+    <div class="mockup-header">B · <code>LeagueCohort</code> aggregate, key (Tier, Week)</div>
+    <div class="mockup-body" style="padding:14px;color:#1a1a1a;font-size:13px;">
+      <div style="background:#fff3cd;border:1px solid #e0a800;border-radius:6px;padding:10px;margin-bottom:10px;">
+        <strong>LeagueCohort</strong> <span style="color:#888;">(aggregate · one per Tier+Week)</span>
+        <ul style="margin:6px 0 0;padding-left:18px;line-height:1.5;">
+          <li><code>Tier</code>, <code>Week</code></li>
+          <li><code>Members</code> : [ {LearnerId, WeeklyXp}, … ] <span style="color:#888;">(all of them)</span></li>
+        </ul>
+        <div style="margin-top:6px;color:#555;"><code>RecordXp(learner, amount)</code> · <code>Settle()</code> ranks members &amp; emits promote/demote.</div>
+      </div>
+      <div style="background:#fdeef3;border:1px dashed #e0115f;border-radius:6px;padding:8px;color:#1a1a1a;">
+        Ana 980 · Bruno 910 · Chen 845 · Dilan 720 · Eva 690 · … <strong>all in one object</strong>
+      </div>
+      <p style="margin:10px 0 0;font-size:12.5px;"><strong style="color:#0b8043;">Win:</strong> Slice-2 settlement is a clean single-aggregate method <code>cohort.Settle()</code>.</p>
+      <p style="margin:6px 0 0;font-size:12.5px;color:#c5221f;"><strong>Trap:</strong> <em>every</em> learner's XP gain mutates this one shared, ever-growing object → write contention + a large-aggregate smell. Real Duolingo caps divisions at ~30 precisely to bound this; our Plan-B cohort (a whole tier) is unbounded.</p>
+    </div>
+  </div>
+
+</div>
+
+<h3 class="section">Which aggregate model for Slice 1?</h3>
+<div class="options">
+  <div class="option" data-choice="per-learner" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>Per-learner LeagueStanding + read-model leaderboard ★</h3><p>Small uncontended aggregates; mirrors LearnerStreak; settlement becomes a Slice-2 process.</p></div>
+  </div>
+  <div class="option" data-choice="cohort-aggregate" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>LeagueCohort aggregate (Tier, Week)</h3><p>Settlement-as-method is elegant, but a hot, unbounded, contended aggregate on the write path.</p></div>
+  </div>
+</div>

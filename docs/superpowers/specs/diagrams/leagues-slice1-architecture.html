@@ -1,0 +1,44 @@
+<h2>Slice 1 — "League skeleton": the whole flow</h2>
+<p class="subtitle"><span style="background:#d8f5e3;border:1px solid #0b8043;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;color:#0b8043;">NEW</span> = built in Slice 1 &nbsp;·&nbsp; <span style="background:#f1f1f3;border:1px solid #cfcfd6;border-radius:4px;padding:1px 6px;font-size:11px;color:#555;">existing</span> = already in the codebase</p>
+
+<div class="mockup">
+  <div class="mockup-header">WRITE path — earning XP feeds the weekly score</div>
+  <div class="mockup-body" style="padding:16px;">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:7px;font-size:12.5px;color:#1a1a1a;">
+      <span style="background:#f1f1f3;border:1px solid #cfcfd6;border-radius:6px;padding:6px 9px;">POST /lessons/{id}/complete</span>
+      <span>→</span>
+      <span style="background:#f1f1f3;border:1px solid #cfcfd6;border-radius:6px;padding:6px 9px;">publishes <strong>LessonCompleted</strong></span>
+      <span>→</span>
+      <span style="background:#f1f1f3;border:1px solid #cfcfd6;border-radius:6px;padding:6px 9px;">AwardXp handler → <strong>XpAccount.AwardXp</strong></span>
+      <span>→</span>
+      <span style="background:#eafaf0;border:1px solid #34a853;border-radius:6px;padding:6px 9px;">raises <strong>XpAwarded(amount, occurredOn)</strong></span>
+    </div>
+    <div style="text-align:center;color:#888;margin:6px 0;">↓ after SaveChanges</div>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:7px;font-size:12.5px;color:#1a1a1a;">
+      <span style="background:#d8f5e3;border:2px solid #0b8043;border-radius:6px;padding:6px 9px;font-weight:700;">Domain-event Dispatcher (NEW)</span>
+      <span>→</span>
+      <span style="background:#d8f5e3;border:2px solid #0b8043;border-radius:6px;padding:6px 9px;font-weight:700;">RecordLeagueXpOnXpAwarded (NEW)</span>
+      <span>→</span>
+      <span style="background:#f6f0fb;border:1px solid #9966cc;border-radius:6px;padding:6px 9px;"><strong>LeagueStanding.RecordXp</strong> <span style="color:#777;">(NEW · lazy week-roll)</span></span>
+      <span>→</span>
+      <span style="background:#eef9ff;border:1px solid #56c5e8;border-radius:6px;padding:6px 9px;">engagement.league_standings <span style="color:#777;">(NEW)</span></span>
+    </div>
+  </div>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">READ path — show me my cohort this week</div>
+  <div class="mockup-body" style="padding:16px;">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:7px;font-size:12.5px;color:#1a1a1a;">
+      <span style="background:#d8f5e3;border:2px solid #0b8043;border-radius:6px;padding:6px 9px;font-weight:700;">GET /me/league (NEW)</span>
+      <span>→</span>
+      <span style="background:#d8f5e3;border:2px solid #0b8043;border-radius:6px;padding:6px 9px;font-weight:700;">GetLeagueLeaderboard query (NEW)</span>
+      <span>→</span>
+      <span style="background:#eef9ff;border:1px solid #56c5e8;border-radius:6px;padding:6px 9px;"><code style="font-size:11px;">standings WHERE Tier=Bronze AND Week=thisWeek ORDER BY WeeklyXp DESC</code></span>
+      <span>→</span>
+      <span style="background:#f6f0fb;border:1px solid #9966cc;border-radius:6px;padding:6px 9px;">LeaderboardDto <span style="color:#777;">(ranked rows + my rank)</span></span>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:14px;">Two teaching echoes of patterns you already built: the <strong>lazy week-roll</strong> in <code>RecordXp</code> mirrors <code>LearnerStreak</code>'s lazy settlement, and the leaderboard <strong>read projection</strong> (stale week ⇒ 0/absent this week) re-applies the write-path rule without mutating — like <code>StreakReport</code>. The dispatcher is the building block your codebase flagged as "arrives when a subscriber exists" — leagues is that subscriber.</p>

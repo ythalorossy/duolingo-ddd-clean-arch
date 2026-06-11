@@ -1,0 +1,71 @@
+<h2>How does the weekly score get fed?</h2>
+<p class="subtitle">A learner earns XP → their league weekly score must go up. There are three ways to wire that, and they differ in <strong>where the XP amount comes from</strong> and <strong>how coupled</strong> leagues are to XP. Boxes = handlers/aggregates; arrows = flow.</p>
+
+<!-- OPTION 1 -->
+<div class="mockup">
+  <div class="mockup-header">A · React to <code>LessonCompleted</code>, re-apply the XP policy</div>
+  <div class="mockup-body" style="padding:14px;">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:#1a1a1a;">
+      <span style="background:#e3f0ff;border:1px solid #4285f4;border-radius:6px;padding:6px 10px;">LessonCompleted</span>
+      <span>→</span>
+      <span style="background:#f1f1f3;border:1px solid #cfcfd6;border-radius:6px;padding:6px 10px;">AwardXp handler → XpAccount</span>
+      <span style="color:#999;">&nbsp;&amp; in parallel&nbsp;</span>
+      <span>→</span>
+      <span style="background:#fff3cd;border:1px solid #e0a800;border-radius:6px;padding:6px 10px;">⚠ Leagues handler <em>recomputes XP via policy</em></span>
+      <span>→</span>
+      <span style="background:#f6f0fb;border:1px solid #9966cc;border-radius:6px;padding:6px 10px;">LeagueStanding +XP</span>
+    </div>
+    <p style="margin:10px 0 0;font-size:12.5px;color:#c5221f;"><strong>Trap:</strong> the XP amount is computed in <em>two</em> places. Add a bonus-XP rule later and the league total silently drifts from the real XP.</p>
+  </div>
+</div>
+
+<!-- OPTION 2 -->
+<div class="mockup" style="outline:2px solid #34a853;outline-offset:1px;">
+  <div class="mockup-header" style="color:#0b8043;">B · React to <code>XpAwarded</code> via a domain-event dispatcher &nbsp;★ recommended</div>
+  <div class="mockup-body" style="padding:14px;">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:#1a1a1a;">
+      <span style="background:#e3f0ff;border:1px solid #4285f4;border-radius:6px;padding:6px 10px;">LessonCompleted</span>
+      <span>→</span>
+      <span style="background:#f1f1f3;border:1px solid #cfcfd6;border-radius:6px;padding:6px 10px;">AwardXp → XpAccount</span>
+      <span>→</span>
+      <span style="background:#eafaf0;border:1px solid #34a853;border-radius:6px;padding:6px 10px;">raises <strong>XpAwarded(amount)</strong></span>
+      <span>→</span>
+      <span style="background:#d8f5e3;border:2px solid #0b8043;border-radius:6px;padding:6px 10px;font-weight:700;">Dispatcher (NEW)</span>
+      <span>→</span>
+      <span style="background:#f6f0fb;border:1px solid #9966cc;border-radius:6px;padding:6px 10px;">Leagues handler +amount → LeagueStanding</span>
+    </div>
+    <p style="margin:10px 0 0;font-size:12.5px;color:#0b8043;"><strong>Wins:</strong> counts the <em>actual</em> XP (single source of truth) · leagues don't know <em>why</em> XP was earned (future-proof) · builds the dispatcher the codebase already flagged as "arrives when a subscriber exists" · <strong>idempotent for free</strong> — <code>XpAwarded</code> is raised at most once per award (the <code>AppliedAward</code> ledger guarantees it), so event re-delivery can't double-count.</p>
+    <p style="margin:6px 0 0;font-size:12px;color:#888;">Cost: a small new building block; dispatch is in-process best-effort (no outbox yet → same maturity as today).</p>
+  </div>
+</div>
+
+<!-- OPTION 3 -->
+<div class="mockup">
+  <div class="mockup-header">C · One handler awards XP <em>and</em> bumps the score, atomically</div>
+  <div class="mockup-body" style="padding:14px;">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:#1a1a1a;">
+      <span style="background:#e3f0ff;border:1px solid #4285f4;border-radius:6px;padding:6px 10px;">LessonCompleted</span>
+      <span>→</span>
+      <span style="background:#fff3cd;border:1px solid #e0a800;border-radius:6px;padding:6px 10px;">one handler: AwardXp <strong>+</strong> bump LeagueStanding</span>
+      <span>→</span>
+      <span style="background:#f1f1f3;border:1px solid #cfcfd6;border-radius:6px;padding:6px 10px;">save XpAccount + LeagueStanding (1 txn)</span>
+    </div>
+    <p style="margin:10px 0 0;font-size:12.5px;color:#7a5c00;"><strong>Trade:</strong> atomic and simple, knows the exact amount — but one handler now has two responsibilities and writes two aggregates in one transaction (against the "one aggregate per transaction" guideline), and it skips the event-driven decoupling the project favors.</p>
+  </div>
+</div>
+
+<h3 class="section">Which wiring for Slice 1?</h3>
+<div class="options">
+  <div class="option" data-choice="a-lessoncompleted" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>React to LessonCompleted, recompute XP</h3><p>Simplest wiring, no new infra — but duplicates the XP calculation.</p></div>
+  </div>
+  <div class="option" data-choice="b-xpawarded-dispatcher" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>React to XpAwarded via a new dispatcher ★</h3><p>Correct, decoupled, idempotent for free, builds the deferred building block. My recommendation.</p></div>
+  </div>
+  <div class="option" data-choice="c-one-handler" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content"><h3>One atomic handler does both</h3><p>Atomic and simple, but couples two responsibilities + two aggregates per transaction.</p></div>
+  </div>
+</div>
