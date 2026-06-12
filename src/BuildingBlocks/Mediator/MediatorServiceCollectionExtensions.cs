@@ -8,12 +8,14 @@ public static class MediatorServiceCollectionExtensions
     private static readonly Type[] HandlerInterfaces =
     [
         typeof(IRequestHandler<,>),
-        typeof(INotificationHandler<>)
+        typeof(INotificationHandler<>),
+        typeof(IDomainEventHandler<>)
     ];
 
     public static IServiceCollection AddMediator(this IServiceCollection services, params Assembly[] assemblies)
     {
         services.AddScoped<IMediator, Mediator>();
+        services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
 
         foreach (var assembly in assemblies)
         foreach (var type in assembly.GetTypes().Where(t => t is { IsAbstract: false, IsInterface: false }))
