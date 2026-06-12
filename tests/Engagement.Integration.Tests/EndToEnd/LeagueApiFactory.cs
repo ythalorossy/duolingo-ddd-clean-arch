@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Time.Testing;
+using Xunit;
 
 namespace Engagement.Integration.Tests.EndToEnd;
 
@@ -32,3 +33,8 @@ public sealed class LeagueApiFactory : WebApplicationFactory<Program>
         });
     }
 }
+
+// Both league e2e classes share ONE factory (one DB) and run sequentially as a collection,
+// so their EnsureDeleted/Migrate can't race each other under xUnit's parallel class execution.
+[CollectionDefinition("League E2E")]
+public sealed class LeagueE2ECollection : ICollectionFixture<LeagueApiFactory>;

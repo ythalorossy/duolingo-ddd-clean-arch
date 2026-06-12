@@ -6,7 +6,8 @@ using Xunit;
 
 namespace Engagement.Integration.Tests.EndToEnd;
 
-public class LeaguePipelineTests(LeagueApiFactory factory) : IClassFixture<LeagueApiFactory>
+[Collection("League E2E")]
+public class LeaguePipelineTests(LeagueApiFactory factory)
 {
     [Fact]
     public async Task Completing_a_lesson_creates_a_bronze_league_standing()
