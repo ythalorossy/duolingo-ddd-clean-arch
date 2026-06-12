@@ -10,12 +10,14 @@ public sealed class EngagementDbContext(DbContextOptions<EngagementDbContext> op
 
     public DbSet<XpAccount> XpAccounts => Set<XpAccount>();
     public DbSet<LearnerStreak> LearnerStreaks => Set<LearnerStreak>();
+    public DbSet<LeagueStanding> LeagueStandings => Set<LeagueStanding>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema(Schema);
         modelBuilder.ApplyConfiguration(new XpAccountConfiguration());
         modelBuilder.ApplyConfiguration(new LearnerStreakConfiguration());
+        modelBuilder.ApplyConfiguration(new LeagueStandingConfiguration());
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken ct = default)
