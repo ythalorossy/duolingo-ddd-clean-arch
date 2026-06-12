@@ -124,5 +124,11 @@ implementation**. Each sub-project gets its own branch (`feat/<name>`) and PR.
   shared by the write path and the pure read projection. Abstract `GrantStreakFreeze` acquisition
   seam (`POST /me/streak-freezes`); no nightly job; idempotency preserved via advancing
   `LastQualifyingDate`. Raises a (subscriber-less) `StreakFrozen` event.
-- ⏭️ **Next:** leagues → real Learning engine → real Identity (and a real freeze economy —
+- ✅ **Sub-project 4 — Leagues, Slice 1 (skeleton)** (PR #4): weekly XP accumulation as a
+  per-learner `LeagueStanding` (Bronze, UTC Monday-anchored week, lazy roll), fed by `XpAwarded`
+  through a new in-process **domain-event dispatcher** building block (`IDomainEventHandler<>` +
+  re-entrancy-guarded dispatch in `EngagementDbContext`); leaderboard read at `GET /me/league`.
+  Idempotency inherited free from the `AppliedAward` ledger (no second `XpAwarded`).
+- ⏭️ **Next:** leagues Slice 2 (settlement — cohort-wide promotion/demotion at week close, the
+  top-20%/bottom-20% rule) → real Learning engine → real Identity (and a real freeze economy —
   earning/buying — when Billing exists).

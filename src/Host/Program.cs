@@ -56,6 +56,10 @@ app.MapGet("/me/streak",
     async (ICurrentUser user, IMediator mediator, CancellationToken ct) =>
         Results.Ok(await mediator.SendAsync(new GetLearnerStreak(user.LearnerId), ct)));
 
+app.MapGet("/me/league",
+    async (ICurrentUser user, IMediator mediator, CancellationToken ct) =>
+        Results.Ok(await mediator.SendAsync(new GetLeagueLeaderboard(user.LearnerId), ct)));
+
 app.MapPost("/me/streak-freezes",
     async (ICurrentUser user, IMediator mediator, CancellationToken ct) =>
     {

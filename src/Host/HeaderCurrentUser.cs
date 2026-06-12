@@ -1,10 +1,5 @@
 namespace Host;
 
-public interface ICurrentUser
-{
-    Guid LearnerId { get; }
-}
-
 // Slice 1: no real auth. The learner comes from an "X-Learner-Id" header, or a fixed
 // demo learner if absent. Replaced by the real Identity module later.
 public sealed class HeaderCurrentUser(IHttpContextAccessor accessor) : ICurrentUser
