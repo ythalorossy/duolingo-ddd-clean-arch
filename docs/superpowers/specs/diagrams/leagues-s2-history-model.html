@@ -1,0 +1,59 @@
+<h2>Settlement needs week N's standings — but Slice 1 overwrites them</h2>
+<p class="subtitle">To rank a cohort, settlement must read every member's <strong>final week-N XP</strong>. Slice 1 keeps one mutable row per learner and overwrites it on the next week's first activity. Here's the fix.</p>
+
+<div class="split">
+
+  <!-- CURRENT (problem) -->
+  <div class="mockup">
+    <div class="mockup-header">A · One row per learner (Slice 1, today)</div>
+    <div class="mockup-body" style="padding:14px;color:#1a1a1a;font-size:13px;">
+      <div style="background:#fffced;border:1px solid #e8c200;border-radius:6px;padding:8px;margin-bottom:8px;">
+        <code>LeagueStanding</code> key = <strong>LearnerId</strong>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+        <span style="background:#fff;border:1px solid #cfcfd6;border-radius:5px;padding:5px 9px;">Ana · Gold · <strong>Week N</strong> · 980</span>
+      </div>
+      <div style="text-align:center;color:#c5221f;font-size:12px;margin:6px 0;">▼ Ana earns 15 XP in week N+1 → <code>RecordXp</code> rolls &amp; overwrites</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span style="background:#fdf3f2;border:1px solid #ea4335;border-radius:5px;padding:5px 9px;">Ana · Gold · <strong>Week N+1</strong> · 15</span>
+      </div>
+      <p style="margin:10px 0 0;color:#c5221f;font-size:12.5px;"><strong>Broken:</strong> the 980 (week N) is gone. Settlement of week N has nothing to rank.</p>
+    </div>
+  </div>
+
+  <!-- PROPOSED -->
+  <div class="mockup" style="outline:2px solid #34a853;outline-offset:1px;">
+    <div class="mockup-header" style="color:#0b8043;">B · One row per (learner, week) &nbsp;★ recommended</div>
+    <div class="mockup-body" style="padding:14px;color:#1a1a1a;font-size:13px;">
+      <div style="background:#eafaf0;border:1px solid #34a853;border-radius:6px;padding:8px;margin-bottom:8px;">
+        <code>LeagueStanding</code> key = <strong>(LearnerId, Week)</strong>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <span style="background:#fff;border:1px solid #cfcfd6;border-radius:5px;padding:5px 9px;">Ana · Gold · <strong>Week N</strong> · 980 &nbsp;<span style="color:#0b8043;">(kept)</span></span>
+        <span style="background:#f3fbf5;border:1px solid #34a853;border-radius:5px;padding:5px 9px;">Ana · Gold · <strong>Week N+1</strong> · 15 &nbsp;<span style="color:#888;">(new row)</span></span>
+      </div>
+      <p style="margin:10px 0 0;color:#0b8043;font-size:12.5px;"><strong>Works:</strong> week N persists as history; N+1 accumulates in its own row. Settlement reads week-N rows whenever it runs.</p>
+    </div>
+  </div>
+
+</div>
+
+<h3 class="section">What changes with the recommended model (B)</h3>
+<ul style="font-size:13.5px;line-height:1.6;color:inherit;">
+  <li><code>RecordXp</code> <strong>find-or-creates the row for the current week</strong> instead of overwriting — old weeks are never touched.</li>
+  <li>The leaderboard query is already keyed by <strong>(tier, week)</strong>, so it fits with no change.</li>
+  <li>Settlement reads week-N rows, then writes each learner's <strong>week-(N+1) placement</strong> (their new tier).</li>
+  <li>Edge: a learner who earns in N+1 <em>before</em> settlement runs gets their <strong>tier carried forward</strong>, and settlement reconciles it (their N+1 XP follows them to the right tier). Acceptable under the explicit-settlement (C) model.</li>
+  <li>Cost: a migration changing the primary key from <code>LearnerId</code> → <code>(LearnerId, WeekStart)</code>, and rows accumulate over weeks (fine; prunable later).</li>
+</ul>
+
+<div class="options">
+  <div class="option" data-choice="per-learner-week" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>Per-(learner, week) rows ★</h3><p>Evolve LeagueStanding's identity to (LearnerId, Week). History preserved; settlement reads it directly.</p></div>
+  </div>
+  <div class="option" data-choice="snapshot" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>Keep one row + a separate week-result snapshot</h3><p>Write an immutable snapshot at week close. Rejected: the snapshot must be written before the overwrite — timing-fragile, and it duplicates the standing.</p></div>
+  </div>
+</div>
