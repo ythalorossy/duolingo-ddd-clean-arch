@@ -34,4 +34,32 @@ public class LeagueStandingTests
         var s = NewBronze();
         Assert.Throws<ArgumentOutOfRangeException>(() => s.RecordXp(-1));
     }
+
+    [Fact]
+    public void PlaceInto_a_higher_tier_raises_Promoted()
+    {
+        var s = LeagueStanding.Create(new LearnerId(Guid.NewGuid()), Wk, LeagueTier.Gold);
+        s.PlaceInto(LeagueTier.Sapphire);
+        Assert.Equal(LeagueTier.Sapphire, s.Tier);
+        var evt = Assert.Single(s.DomainEvents.OfType<Promoted>());
+        Assert.Equal(LeagueTier.Gold, evt.From);
+        Assert.Equal(LeagueTier.Sapphire, evt.To);
+    }
+
+    [Fact]
+    public void PlaceInto_a_lower_tier_raises_Demoted()
+    {
+        var s = LeagueStanding.Create(new LearnerId(Guid.NewGuid()), Wk, LeagueTier.Gold);
+        s.PlaceInto(LeagueTier.Silver);
+        Assert.Equal(LeagueTier.Silver, s.Tier);
+        Assert.Single(s.DomainEvents.OfType<Demoted>());
+    }
+
+    [Fact]
+    public void PlaceInto_the_same_tier_is_a_no_op()
+    {
+        var s = LeagueStanding.Create(new LearnerId(Guid.NewGuid()), Wk, LeagueTier.Gold);
+        s.PlaceInto(LeagueTier.Gold);
+        Assert.Empty(s.DomainEvents);
+    }
 }

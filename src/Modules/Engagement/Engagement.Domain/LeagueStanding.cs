@@ -29,4 +29,19 @@ public sealed class LeagueStanding : AggregateRoot
             throw new ArgumentOutOfRangeException(nameof(amount), "XP amount cannot be negative.");
         WeeklyXp = new Xp(WeeklyXp.Value + amount);
     }
+
+    // Settlement moves a learner to their next-week tier. Raises Promoted/Demoted (no subscriber
+    // yet — same pattern as StreakAdvanced/StreakFrozen). OccurredOn matches the XpAwarded
+    // convention of stamping the processing instant.
+    public void PlaceInto(LeagueTier tier)
+    {
+        if (tier == Tier)
+            return;
+
+        var from = Tier;
+        Tier = tier;
+        RaiseDomainEvent(tier > from
+            ? new Promoted(Id.Value, from, tier, Week.Start, DateTimeOffset.UtcNow)
+            : new Demoted(Id.Value, from, tier, Week.Start, DateTimeOffset.UtcNow));
+    }
 }
