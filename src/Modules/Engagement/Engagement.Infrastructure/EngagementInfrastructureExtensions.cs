@@ -13,6 +13,7 @@ public static class EngagementInfrastructureExtensions
         services.AddScoped<IXpAccountRepository, XpAccountRepository>();
         services.AddScoped<ILearnerStreakRepository, LearnerStreakRepository>();
         services.AddScoped<ILeagueStandingRepository, LeagueStandingRepository>();
+        services.AddScoped<ILeagueWeekSettlementRepository, LeagueWeekSettlementRepository>();
         services.AddScoped<LessonCompletionXpPolicy>();
 
         // The system clock is an infrastructure adapter (like the DbContext): the application's

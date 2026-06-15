@@ -60,6 +60,21 @@ app.MapGet("/me/league",
     async (ICurrentUser user, IMediator mediator, CancellationToken ct) =>
         Results.Ok(await mediator.SendAsync(new GetLeagueLeaderboard(user.LearnerId), ct)));
 
+app.MapPost("/leagues/weeks/{weekStart}/settle",
+    async (DateOnly weekStart, IMediator mediator, CancellationToken ct) =>
+    {
+        try
+        {
+            await mediator.SendAsync(new SettleLeagueWeek(weekStart), ct);
+            return Results.Ok();
+        }
+        catch (ArgumentException ex)
+        {
+            // A non-Monday weekStart is bad input, not a 500.
+            return Results.BadRequest(new { error = ex.Message });
+        }
+    });
+
 app.MapPost("/me/streak-freezes",
     async (ICurrentUser user, IMediator mediator, CancellationToken ct) =>
     {

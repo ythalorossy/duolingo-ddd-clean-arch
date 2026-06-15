@@ -4,6 +4,7 @@ using Engagement.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Engagement.Infrastructure.Migrations
 {
     [DbContext(typeof(EngagementDbContext))]
-    partial class EngagementDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260615153411_ReshapeLeagueStandingKey")]
+    partial class ReshapeLeagueStandingKey
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -45,20 +48,6 @@ namespace Engagement.Infrastructure.Migrations
                     b.HasKey("Id", "Week");
 
                     b.ToTable("LeagueStandings", "engagement");
-                });
-
-            modelBuilder.Entity("Engagement.Domain.LeagueWeekSettlement", b =>
-                {
-                    b.Property<DateOnly>("Week")
-                        .HasColumnType("date")
-                        .HasColumnName("WeekStart");
-
-                    b.Property<DateTimeOffset>("SettledAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.HasKey("Week");
-
-                    b.ToTable("LeagueWeekSettlements", "engagement");
                 });
 
             modelBuilder.Entity("Engagement.Domain.LearnerStreak", b =>

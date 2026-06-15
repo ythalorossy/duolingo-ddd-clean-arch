@@ -1,0 +1,48 @@
+<h2>Slice 2 — how settlement runs</h2>
+<p class="subtitle">An explicit <code>SettleLeagueWeek(week)</code> command (the seam) settles every tier's cohort for that week, idempotently. <span style="background:#d8f5e3;border:1px solid #0b8043;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;color:#0b8043;">NEW</span> = built in Slice 2.</p>
+
+<div class="mockup">
+  <div class="mockup-header">The settlement flow</div>
+  <div class="mockup-body" style="padding:16px;color:#1a1a1a;font-size:12.5px;">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:7px;">
+      <span style="background:#d8f5e3;border:2px solid #0b8043;border-radius:6px;padding:6px 9px;font-weight:700;">POST /leagues/weeks/{week}/settle (NEW)</span>
+      <span>→</span>
+      <span style="background:#d8f5e3;border:2px solid #0b8043;border-radius:6px;padding:6px 9px;font-weight:700;">SettleLeagueWeek(week) (NEW)</span>
+    </div>
+    <div style="margin:8px 0;color:#7a5c00;">↳ <strong>already settled?</strong> (week marker exists) → <strong>no-op</strong> (idempotent)</div>
+    <div style="margin:8px 0;color:#555;">↳ otherwise, for <strong>each tier</strong> Bronze…Diamond:</div>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-left:18px;">
+      <span style="background:#eef9ff;border:1px solid #56c5e8;border-radius:6px;padding:6px 9px;">rank the tier's week-N cohort</span>
+      <span>→</span>
+      <span style="background:#f1f1f3;border:1px solid #cfcfd6;border-radius:6px;padding:6px 9px;">k = floor(0.2 × N)</span>
+      <span>→</span>
+      <span style="background:#e6f4ea;border:1px solid #34a853;border-radius:6px;padding:6px 9px;">top k ↑ (Diamond stays)</span>
+      <span style="background:#fce8e6;border:1px solid #ea4335;border-radius:6px;padding:6px 9px;">bottom k ↓ (Bronze stays)</span>
+      <span>→</span>
+      <span style="background:#f6f0fb;border:1px solid #9966cc;border-radius:6px;padding:6px 9px;">write each mover's <strong>week N+1 placement</strong></span>
+    </div>
+    <div style="margin:10px 0 0;display:flex;flex-wrap:wrap;align-items:center;gap:7px;">
+      <span>then</span>
+      <span style="background:#d8f5e3;border:2px solid #0b8043;border-radius:6px;padding:6px 9px;font-weight:700;">insert week-settled marker (NEW)</span>
+    </div>
+  </div>
+</div>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Example — Gold cohort of 12 settles into next week</div>
+    <div class="mockup-body" style="padding:12px;color:#1a1a1a;font-size:12.5px;">
+      <p style="margin:0 0 6px;">↑ top 2 → <span style="background:#eef1fb;border:1px solid #0f52ba;border-radius:4px;padding:1px 6px;">Sapphire</span></p>
+      <p style="margin:0 0 6px;">8 stay → <span style="background:#fffced;border:1px solid #e8c200;border-radius:4px;padding:1px 6px;">Gold</span></p>
+      <p style="margin:0;">↓ bottom 2 → <span style="background:#f7f7f7;border:1px solid #c0c0c0;border-radius:4px;padding:1px 6px;">Silver</span></p>
+      <p style="margin:8px 0 0;color:#888;">Movers get a fresh week-N+1 row (new tier, 0 XP). Stayers' next row carries their tier forward when they next play.</p>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">Idempotency &amp; the "no auto-trigger yet"</div>
+    <div class="mockup-body" style="padding:12px;color:#1a1a1a;font-size:12.5px;">
+      <p style="margin:0 0 6px;">A <strong>per-week settled marker</strong> makes re-running <code>SettleLeagueWeek</code> a no-op — same "idempotency is a domain rule" theme as the <code>AppliedAward</code> ledger.</p>
+      <p style="margin:0;">What <em>automatically</em> closes a week (a scheduler, or lazy-on-activity) is <strong>deferred</strong> — Slice 2 builds the operation; a later increment wires the real driver. The command/endpoint is the seam (like <code>GrantStreakFreeze</code>).</p>
+    </div>
+  </div>
+</div>

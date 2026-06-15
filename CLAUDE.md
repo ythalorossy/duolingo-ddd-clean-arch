@@ -129,6 +129,11 @@ implementation**. Each sub-project gets its own branch (`feat/<name>`) and PR.
   through a new in-process **domain-event dispatcher** building block (`IDomainEventHandler<>` +
   re-entrancy-guarded dispatch in `EngagementDbContext`); leaderboard read at `GET /me/league`.
   Idempotency inherited free from the `AppliedAward` ledger (no second `XpAwarded`).
-- ⏭️ **Next:** leagues Slice 2 (settlement — cohort-wide promotion/demotion at week close, the
-  top-20%/bottom-20% rule) → real Learning engine → real Identity (and a real freeze economy —
-  earning/buying — when Billing exists).
+- ✅ **Sub-project 4 — Leagues, Slice 2 (settlement)** (PR #5): cohort-wide promotion/demotion
+  behind an explicit `SettleLeagueWeek` seam — `LeagueStanding` reshaped to per-(learner, week)
+  rows so week-N history survives; `floor(0.2·N)` promote/demote with Bronze/Diamond edges;
+  per-week `LeagueWeekSettlement` idempotency marker; subscriber-less `Promoted`/`Demoted` events;
+  `POST /leagues/weeks/{weekStart}/settle`. The automatic trigger (scheduler / lazy-on-activity)
+  is deferred — the command is the seam.
+- ⏭️ **Next:** the automatic settlement trigger → real Learning engine → real Identity (and a
+  real freeze economy — earning/buying — when Billing exists).

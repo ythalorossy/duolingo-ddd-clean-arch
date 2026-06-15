@@ -1,0 +1,58 @@
+<h2>How many move? The 20% rule, made exact</h2>
+<p class="subtitle">"Top/bottom 20%" has to become an integer count that behaves for a cohort of 3 or 300. The open choice is <strong>how to round</strong>; the edges and tie-breaks are shown as settled.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Worked example — a Gold cohort of 12, using floor(0.2 × 12) = 2</div>
+  <div class="mockup-body" style="padding:14px;color:#1a1a1a;font-size:13px;">
+    <div style="background:#e6f4ea;border:1px solid #34a853;border-radius:6px;padding:5px 8px;margin-bottom:4px;font-weight:700;color:#0b8043;">PROMOTE ↑ (2)</div>
+    <div style="padding:3px 10px;">1. Ana 980 &nbsp;·&nbsp; 2. Bruno 910</div>
+    <div style="background:#f1f1f3;border:1px solid #cfcfd6;border-radius:6px;padding:5px 8px;margin:6px 0 4px;font-weight:700;color:#555;">STAY (8)</div>
+    <div style="padding:3px 10px;color:#555;">3. Chen 845 … 10. Gita 120</div>
+    <div style="background:#fce8e6;border:1px solid #ea4335;border-radius:6px;padding:5px 8px;margin:6px 0 4px;font-weight:700;color:#c5221f;">DEMOTE ↓ (2)</div>
+    <div style="padding:3px 10px;">11. Hiro 60 &nbsp;·&nbsp; 12. Iris 10</div>
+  </div>
+</div>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Count by rounding choice — promote = demote = round(0.2 × N)</div>
+    <div class="mockup-body" style="padding:12px;color:#1a1a1a;font-size:12.5px;">
+      <table style="width:100%;border-collapse:collapse;text-align:center;">
+        <tr style="border-bottom:1px solid #cfcfd6;font-weight:700;">
+          <td style="padding:4px;">cohort N</td><td>floor ★</td><td>round</td><td>ceil</td><td>middle (floor)</td>
+        </tr>
+        <tr><td style="padding:4px;">3</td><td><strong>0</strong></td><td>1</td><td>1</td><td>3</td></tr>
+        <tr><td style="padding:4px;">5</td><td><strong>1</strong></td><td>1</td><td>1</td><td>3</td></tr>
+        <tr><td style="padding:4px;">8</td><td><strong>1</strong></td><td>2</td><td>2</td><td>6</td></tr>
+        <tr><td style="padding:4px;">12</td><td><strong>2</strong></td><td>2</td><td>3</td><td>8</td></tr>
+        <tr><td style="padding:4px;">30</td><td><strong>6</strong></td><td>6</td><td>6</td><td>18</td></tr>
+      </table>
+      <p style="margin:8px 0 0;color:#0b8043;font-size:12px;"><strong>Why floor:</strong> 2·floor(0.2N) is always &lt; N, so there's <em>always</em> a non-empty "stay" middle and nobody can be both promoted and demoted — no special small-cohort guard needed. Cohorts of ≤4 simply don't move (too small to compete).</p>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Settled: edges &amp; tie-breaks</div>
+    <div class="mockup-body" style="padding:12px;color:#1a1a1a;font-size:12.5px;">
+      <p style="margin:0 0 8px;"><span style="background:#fcf3ea;border:1px solid #cd7f32;border-radius:4px;padding:1px 6px;">Bronze</span> is the floor → its bottom-20% <strong>stay</strong> (no demotion below Bronze).</p>
+      <p style="margin:0 0 8px;"><span style="background:#eef9ff;border:1px solid #56c5e8;border-radius:4px;padding:1px 6px;">Diamond</span> is the summit → its top-20% <strong>stay</strong> (no promotion above Diamond).</p>
+      <p style="margin:0;">Ties (equal weekly XP at a boundary) are broken by a <strong>stable sort on LearnerId</strong> — already how the cohort query orders, so settlement is deterministic.</p>
+    </div>
+  </div>
+</div>
+
+<h3 class="section">How should we round "20% of N" to a count?</h3>
+<div class="options">
+  <div class="option" data-choice="floor" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>floor(0.2 × N) ★</h3><p>Always leaves a middle, never overlaps, ≤4-person cohorts rest. Simplest with the strongest guarantees.</p></div>
+  </div>
+  <div class="option" data-choice="round" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>round(0.2 × N)</h3><p>A bit more movement (e.g. N=8 → 2 instead of 1); starts moving at N=3. Still overlap-safe at these sizes.</p></div>
+  </div>
+  <div class="option" data-choice="ceil" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content"><h3>ceil(0.2 × N)</h3><p>Most aggressive (N=12 → 3 each). Can fully reshuffle tiny cohorts (e.g. N=2 → everyone moves).</p></div>
+  </div>
+</div>
