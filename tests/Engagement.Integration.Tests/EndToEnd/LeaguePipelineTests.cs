@@ -12,6 +12,8 @@ public class LeaguePipelineTests(LeagueApiFactory factory)
     [Fact]
     public async Task Completing_a_lesson_creates_a_bronze_league_standing()
     {
+        factory.Clock.SetUtcNow(new DateTimeOffset(2030, 1, 9, 12, 0, 0, TimeSpan.Zero));
+
         var learner = Guid.NewGuid();
 
         using (var scope = factory.Services.CreateScope())
@@ -25,7 +27,7 @@ public class LeaguePipelineTests(LeagueApiFactory factory)
         using (var scope = factory.Services.CreateScope())
         {
             var repo = scope.ServiceProvider.GetRequiredService<ILeagueStandingRepository>();
-            var s = await repo.GetAsync(new LearnerId(learner), CancellationToken.None);
+            var s = await repo.GetMostRecentAsync(new LearnerId(learner), CancellationToken.None);
             Assert.NotNull(s);
             Assert.Equal(LeagueTier.Bronze, s!.Tier);
             Assert.Equal(new DateOnly(2030, 1, 7), s.Week.Start);
@@ -36,6 +38,8 @@ public class LeaguePipelineTests(LeagueApiFactory factory)
     [Fact]
     public async Task Re_delivered_lesson_does_not_double_count_weekly_xp()
     {
+        factory.Clock.SetUtcNow(new DateTimeOffset(2030, 1, 9, 12, 0, 0, TimeSpan.Zero));
+
         var learner = Guid.NewGuid();
         // Same event identity on both deliveries → AwardXp's AppliedAward ledger blocks the
         // second award, so no second XpAwarded is raised and the weekly score must not grow.
@@ -54,7 +58,7 @@ public class LeaguePipelineTests(LeagueApiFactory factory)
         {
             using var scope = factory.Services.CreateScope();
             var repo = scope.ServiceProvider.GetRequiredService<ILeagueStandingRepository>();
-            var s = await repo.GetAsync(new LearnerId(learner), CancellationToken.None);
+            var s = await repo.GetMostRecentAsync(new LearnerId(learner), CancellationToken.None);
             return s!.WeeklyXp.Value;
         }
 

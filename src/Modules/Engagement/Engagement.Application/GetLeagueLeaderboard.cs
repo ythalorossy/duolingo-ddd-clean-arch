@@ -18,8 +18,11 @@ public sealed class GetLeagueLeaderboardHandler(ILeagueStandingRepository reposi
         var id = new LearnerId(request.LearnerId);
         var currentWeek = LeagueWeek.Containing(clock.GetUtcNow());
 
-        var mine = await repository.GetAsync(id, ct);
-        var tier = mine?.Tier ?? LeagueTier.Bronze; // unknown learner defaults to Bronze
+        // Tier for the board: this week's row if present, else carry-forward from the latest row, else Bronze.
+        var thisWeek = await repository.GetAsync(id, currentWeek, ct);
+        var tier = thisWeek?.Tier
+                   ?? (await repository.GetMostRecentAsync(id, ct))?.Tier
+                   ?? LeagueTier.Bronze;
 
         var cohort = await repository.GetCohortAsync(tier, currentWeek, ct);
 
