@@ -10,7 +10,12 @@ public sealed class SettleLeagueWeekHandler(
     ILeagueWeekSettlementRepository settlements,
     TimeProvider clock) : IRequestHandler<SettleLeagueWeek, Unit>
 {
+    // Each tier's cohort is settled independently, so processing order does not affect the
+    // result; Enum.GetValues returns ascending declaration order (Bronze…Diamond), which is fine.
     private static readonly LeagueTier[] AllTiers = Enum.GetValues<LeagueTier>();
+
+    // The settlement rule: top/bottom this fraction of each cohort move a tier.
+    private const double PromotionDemotionFraction = 0.2;
 
     public async Task<Unit> HandleAsync(SettleLeagueWeek request, CancellationToken ct)
     {
@@ -23,7 +28,7 @@ public sealed class SettleLeagueWeekHandler(
         foreach (var tier in AllTiers)
         {
             var cohort = await standings.GetCohortAsync(tier, week, ct); // ranked desc, id tiebreak
-            var k = (int)Math.Floor(0.2 * cohort.Count);
+            var k = (int)Math.Floor(PromotionDemotionFraction * cohort.Count);
             if (k == 0)
                 continue;
 

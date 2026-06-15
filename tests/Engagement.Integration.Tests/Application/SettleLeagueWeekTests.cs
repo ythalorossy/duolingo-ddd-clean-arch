@@ -29,7 +29,7 @@ public class SettleLeagueWeekTests
         public Task AddAsync(LeagueWeekSettlement marker, CancellationToken ct) { Settled.Add(marker.Week.Start); return Task.CompletedTask; }
     }
 
-    private static readonly LeagueWeek Wk = LeagueWeek.Containing(new DateTimeOffset(2030, 1, 9, 12, 0, 0, TimeSpan.Zero)); // Jan 7
+    private static readonly LeagueWeek Wk = LeagueWeek.Containing(new DateTimeOffset(2030, 1, 9, 12, 0, 0, TimeSpan.Zero)); // input Wed Jan 9 2030; week starts Mon Jan 7
     private static readonly DateOnly NextStart = new(2030, 1, 14);
     private static FakeTimeProvider Clock => new(new DateTimeOffset(2030, 1, 14, 0, 0, 0, TimeSpan.Zero));
 
@@ -102,6 +102,7 @@ public class SettleLeagueWeekTests
         await handler.HandleAsync(new SettleLeagueWeek(Wk.Start), CancellationToken.None);
 
         Assert.Equal(tierAfterFirst, st.Store[(ids[0], NextStart)].Tier); // unchanged
+        Assert.Single(se.Settled);
     }
 
     [Fact]
