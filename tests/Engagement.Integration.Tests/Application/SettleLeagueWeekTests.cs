@@ -122,4 +122,22 @@ public class SettleLeagueWeekTests
         Assert.Equal(LeagueTier.Sapphire, st.Store[(top, NextStart)].Tier); // moved
         Assert.Equal(99, st.Store[(top, NextStart)].WeeklyXp.Value);        // XP preserved
     }
+
+    [Fact]
+    public async Task Diamond_cohort_top_slice_stays_at_Diamond()
+    {
+        var (st, ids) = BronzeCohort(10); // k = floor(0.2 * 10) = 2
+        foreach (var key in st.Store.Keys.ToList())
+            st.Store[key].PlaceInto(LeagueTier.Diamond); // relabel the cohort as Diamond
+        var se = new InMemorySettlements();
+
+        await Handler(st, se).HandleAsync(new SettleLeagueWeek(Wk.Start), CancellationToken.None);
+
+        // Top 2 would promote past Diamond → clamped to Diamond → no placement row created.
+        Assert.False(st.Store.ContainsKey((ids[0], NextStart)));
+        Assert.False(st.Store.ContainsKey((ids[1], NextStart)));
+        // Bottom 2 demote to Obsidian.
+        Assert.Equal(LeagueTier.Obsidian, st.Store[(ids[8], NextStart)].Tier);
+        Assert.Equal(LeagueTier.Obsidian, st.Store[(ids[9], NextStart)].Tier);
+    }
 }
