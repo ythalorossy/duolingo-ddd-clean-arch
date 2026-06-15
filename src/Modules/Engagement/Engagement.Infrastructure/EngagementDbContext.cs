@@ -18,6 +18,7 @@ public sealed class EngagementDbContext(
     public DbSet<XpAccount> XpAccounts => Set<XpAccount>();
     public DbSet<LearnerStreak> LearnerStreaks => Set<LearnerStreak>();
     public DbSet<LeagueStanding> LeagueStandings => Set<LeagueStanding>();
+    public DbSet<LeagueWeekSettlement> LeagueWeekSettlements => Set<LeagueWeekSettlement>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,6 +26,7 @@ public sealed class EngagementDbContext(
         modelBuilder.ApplyConfiguration(new XpAccountConfiguration());
         modelBuilder.ApplyConfiguration(new LearnerStreakConfiguration());
         modelBuilder.ApplyConfiguration(new LeagueStandingConfiguration());
+        modelBuilder.ApplyConfiguration(new LeagueWeekSettlementConfiguration());
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken ct = default)

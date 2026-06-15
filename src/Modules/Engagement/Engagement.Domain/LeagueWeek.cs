@@ -24,6 +24,8 @@ public sealed class LeagueWeek : ValueObject
         return new LeagueWeek(date.AddDays(-daysSinceMonday));
     }
 
+    public LeagueWeek Next() => new(Start.AddDays(7));
+
     protected override IEnumerable<object?> GetEqualityComponents()
     {
         yield return Start;
