@@ -145,5 +145,12 @@ implementation**. Each sub-project gets its own branch (`feat/<name>`) and PR.
   per-week `LeagueWeekSettlement` idempotency marker; subscriber-less `Promoted`/`Demoted` events;
   `POST /leagues/weeks/{weekStart}/settle`. The automatic trigger (scheduler / lazy-on-activity)
   is deferred — the command is the seam.
-- ⏭️ **Next:** the automatic settlement trigger → real Learning engine → real Identity (and a
-  real freeze economy — earning/buying — when Billing exists).
+- ✅ **Sub-project 4 — Leagues, Slice 3 (automatic trigger)** (branch `feat/leagues-auto-settlement`):
+  a feature-flagged `BackgroundService` (`LeagueSettlementScheduler`, the repo's first) periodically
+  settles every ended-but-unsettled week via a new `SettleDueLeagueWeeks` policy command, which sends
+  the unchanged `SettleLeagueWeek` once per due week (oldest-first → the chain holds; idempotent via
+  the Slice-2 marker). `PeriodicTimer` is fed the injected `TimeProvider` (so `FakeTimeProvider` drives
+  it in tests); disabled in the E2E hosts via `Leagues:Settlement:Enabled=false`. New repo query
+  `GetDistinctEndedWeeksAsync`; no schema change / no migration.
+- ⏭️ **Next:** real Learning engine → real Identity (and a real freeze economy — earning/buying —
+  when Billing exists); a subscriber for the `Promoted`/`Demoted` events.
