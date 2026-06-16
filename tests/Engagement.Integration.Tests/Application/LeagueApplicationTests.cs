@@ -36,6 +36,10 @@ public class LeagueApplicationTests
                     .OrderByDescending(s => s.WeeklyXp.Value)
                     .ThenBy(s => s.Id.Value)
                     .ToList());
+        public Task<IReadOnlyList<LeagueWeek>> GetDistinctEndedWeeksAsync(LeagueWeek currentWeek, CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<LeagueWeek>>(
+                _store.Values.Select(s => s.Week).Distinct()
+                    .Where(w => w.Start < currentWeek.Start).OrderBy(w => w.Start).ToList());
     }
 
     private static FakeTimeProvider ClockAt(int y, int m, int d) =>

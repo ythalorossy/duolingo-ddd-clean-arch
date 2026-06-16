@@ -20,6 +20,10 @@ public class SettleLeagueWeekTests
             Task.FromResult<IReadOnlyList<LeagueStanding>>(
                 Store.Values.Where(s => s.Tier == tier && s.Week == week)
                     .OrderByDescending(s => s.WeeklyXp.Value).ThenBy(s => s.Id.Value).ToList());
+        public Task<IReadOnlyList<LeagueWeek>> GetDistinctEndedWeeksAsync(LeagueWeek currentWeek, CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<LeagueWeek>>(
+                Store.Values.Select(s => s.Week).Distinct()
+                    .Where(w => w.Start < currentWeek.Start).OrderBy(w => w.Start).ToList());
     }
 
     private sealed class InMemorySettlements : ILeagueWeekSettlementRepository

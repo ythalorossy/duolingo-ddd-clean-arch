@@ -28,4 +28,14 @@ public sealed class LeagueStandingRepository(EngagementDbContext context) : ILea
             .ThenBy(s => s.Id)
             .ToListAsync(ct);
     }
+
+    public async Task<IReadOnlyList<LeagueWeek>> GetDistinctEndedWeeksAsync(
+        LeagueWeek currentWeek, CancellationToken ct)
+    {
+        // EF can translate Distinct() over the whole value-converted Week column, but NOT a "<"
+        // comparison on it (only == / OrderBy by the whole VO). So materialise the small distinct-week
+        // set, then filter "ended" and sort by Start in memory.
+        var weeks = await context.LeagueStandings.Select(s => s.Week).Distinct().ToListAsync(ct);
+        return weeks.Where(w => w.Start < currentWeek.Start).OrderBy(w => w.Start).ToList();
+    }
 }
