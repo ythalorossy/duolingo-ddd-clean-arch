@@ -14,6 +14,7 @@ public sealed class EngagementApiFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting("ConnectionStrings:Engagement", TestConnectionString);
+        builder.UseSetting("Leagues:Settlement:Enabled", "false"); // keep the scheduler out of E2E (shared FakeTimeProvider)
 
         builder.ConfigureServices(services =>
         {

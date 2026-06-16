@@ -20,6 +20,13 @@ builder.Services.AddEngagementInfrastructure(
     builder.Configuration.GetConnectionString("Engagement")
     ?? throw new InvalidOperationException("Missing ConnectionStrings:Engagement"));
 
+// League weeks close automatically: a BackgroundService periodically settles any ended-but-unsettled
+// week. Feature-flagged so the E2E test hosts can disable it (they jump a shared FakeTimeProvider).
+builder.Services.Configure<LeagueSettlementOptions>(
+    builder.Configuration.GetSection("Leagues:Settlement"));
+if (builder.Configuration.GetValue("Leagues:Settlement:Enabled", true))
+    builder.Services.AddHostedService<LeagueSettlementScheduler>();
+
 var app = builder.Build();
 
 // --- Endpoints ---
