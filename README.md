@@ -87,33 +87,45 @@ docs/
 
 ```powershell
 dotnet build
-dotnet test          # 30 tests: 15 domain unit + 15 integration (incl. end-to-end on LocalDB)
+dotnet test          # 114 tests: 60 domain unit + 54 integration (incl. end-to-end on LocalDB)
 ```
 
 The integration tests create and migrate their own databases automatically, then clean up.
 
-### The two endpoints (slice 1)
+### The API
 
 | Method | Route | Purpose |
 |---|---|---|
-| `POST` | `/lessons/{lessonId}/complete` | Complete a (stubbed) lesson → awards XP |
-| `GET`  | `/me/engagement` | Read the current learner's total XP |
+| `POST` | `/lessons/{lessonId}/complete` | Complete a (stubbed) lesson → awards XP, advances the streak, accrues league XP |
+| `GET`  | `/me/xp` | The learner's total XP |
+| `GET`  | `/me/streak` | Current & longest streak, status, freezes available |
+| `PUT`  | `/me/timezone` | Set the learner's IANA time zone (drives streak day boundaries) |
+| `POST` | `/me/streak-freezes` | Grant a streak freeze (abstract acquisition seam) |
+| `GET`  | `/me/league` | The learner's weekly league leaderboard |
+| `POST` | `/leagues/weeks/{weekStart}/settle` | Settle a league week — promote/demote cohorts |
 
 The current user is faked via an `X-Learner-Id` header (real auth arrives with the Identity
 module). See `CLAUDE.md` for a note on running the Host against a dev database.
 
 ## Documentation
 
+Every sub-project is captured as a **spec** (the *why*, with rejected alternatives) and a
+**plan** (its TDD task breakdown).
+
 - **Design foundations** (strategic DDD, architecture, build order): [`docs/superpowers/specs/2026-05-28-architecture-foundations-design.md`](docs/superpowers/specs/2026-05-28-architecture-foundations-design.md)
-- **Sub-project 1 spec** (the XP skeleton): [`docs/superpowers/specs/2026-05-28-engagement-xp-skeleton-design.md`](docs/superpowers/specs/2026-05-28-engagement-xp-skeleton-design.md)
-- **Implementation plan** (13 TDD tasks): [`docs/superpowers/plans/2026-05-28-engagement-xp-skeleton.md`](docs/superpowers/plans/2026-05-28-engagement-xp-skeleton.md)
+- **All specs:** [`docs/superpowers/specs`](docs/superpowers/specs) · **all plans:** [`docs/superpowers/plans`](docs/superpowers/plans) — XP skeleton, streaks, streak freeze, and leagues (slices 1 & 2)
 - **How the mediator works:** [`docs/design/building-blocks/mediator.md`](docs/design/building-blocks/mediator.md)
 
 ## Status & roadmap
 
-- ✅ **Sub-project 1 — Engagement XP walking skeleton:** earn + read XP end-to-end, 30 tests green.
-- ⏭️ **Grow the core:** streaks (daily goal, streak freeze, timezones) → leagues (promotion/relegation).
-- ⏭️ **Real Learning engine:** replace the stub with the actual exercise/grading model.
-- ⏭️ **Real Identity:** replace the faked current user with authentication.
+- ✅ **Sub-project 1 — XP walking skeleton:** earn + read XP end-to-end.
+- ✅ **Sub-project 2 — Streaks:** timezone-correct daily streaks (current + longest) as a derived
+  aggregate reacting to `LessonCompleted`.
+- ✅ **Sub-project 3 — Streak freeze:** auto-applied, lazily-settled, capped freeze — one shared
+  rule across the write path and the read projection, no nightly job.
+- ✅ **Sub-project 4 — Leagues:** weekly XP accumulation + leaderboard (Slice 1) and cohort
+  promotion/demotion at week close (Slice 2), fed by an in-process domain-event dispatcher.
+- ⏭️ **Next:** the automatic settlement trigger → real Learning engine → real Identity.
 
-Each step follows its own **brainstorm → spec → plan → TDD** cycle on a dedicated branch.
+114 tests green. Each step follows its own **brainstorm → spec → plan → TDD** cycle on a dedicated
+branch.
