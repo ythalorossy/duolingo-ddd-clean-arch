@@ -48,6 +48,11 @@ extracted into a service later. Modules: **Identity** (generic), **Learning** (s
 - **CQRS-lite:** every use case is an `IRequest`/`IRequestHandler` (commands/queries) or an
   `INotificationHandler`. Cross-cutting concerns go in `IPipelineBehavior`s.
 - **Idempotency is a domain rule** (the `AppliedAward` ledger), not an infra trick.
+- **EF value-converter querying:** compare/order by the *whole* value object (`s.Week == week`,
+  `OrderBy(s => s.Week)`); never reach into a converted member (`s.Week.Start`) — EF can't
+  translate it. Value-equality (via `ValueObject`) lets VOs serve as (composite) keys.
+- **"Now" comes from the injected `TimeProvider`** in handlers, never `DateTimeOffset.UtcNow` —
+  except a domain event may stamp its own `OccurredOn` inline (the `XpAwarded` convention).
 
 ## Solution layout
 
@@ -72,6 +77,7 @@ docs/
 dotnet build                                   # build the solution
 dotnet test                                    # run ALL tests
 dotnet test tests/Engagement.Domain.Tests      # fast domain tests only
+dotnet test tests/<Project> --filter "FullyQualifiedName~<ClassName>"  # one test class (TDD loop)
 dotnet run --project src/Host                  # run the API (see "Database" note)
 
 # EF migrations (uses the design-time factory → DuolingoEngagement_Design DB)
@@ -85,6 +91,10 @@ dotnet ef migrations add <Name> `
 - **LocalDB is on-demand** — no service to start; the first connection spins it up.
 - **Tests self-manage their databases** (`EnsureDeleted` + `Migrate`) using isolated names:
   `DuolingoEngagement_Test`, `DuolingoEngagement_E2E`, `DuolingoEngagement_Design`.
+- **One unique DB name per persistence/e2e test class** — xUnit runs classes in parallel, so a
+  shared name races `EnsureDeleted`.
+- **`FakeTimeProvider` is forward-only** (`SetUtcNow` throws going backward). E2E classes sharing a
+  factory share its clock, so a test needing a different time window needs its own factory.
 - The running Host uses `DuolingoEngagement` (see `appsettings.json`).
 - **Known gap / TODO:** the Host does **not** auto-apply migrations on startup yet, and only
   `Engagement.Infrastructure` references `Microsoft.EntityFrameworkCore.Design`. To run the
