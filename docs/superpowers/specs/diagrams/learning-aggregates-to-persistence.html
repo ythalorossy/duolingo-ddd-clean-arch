@@ -1,0 +1,90 @@
+<h2>Three aggregates → three persistent entities</h2>
+<p class="subtitle">Short answer: <strong>yes</strong> — each aggregate root maps to its own persistent entity (one table + one EF configuration + one <code>DbSet</code>) in a new <code>learning</code> schema. Two nuances below keep the boundaries honest.</p>
+
+<div class="map">
+  <div class="pair">
+    <div class="agg"><span class="agg-tag">🔒 Course</span><div class="node c">📘 root</div></div>
+    <div class="arrow">maps to →</div>
+    <div class="tbl">
+      <div class="tbl-name">learning.courses</div>
+      <div class="col"><span class="k">Id</span> <span class="pk">PK</span></div>
+      <div class="col">Title</div>
+      <div class="col">Language</div>
+    </div>
+  </div>
+
+  <div class="pair">
+    <div class="agg"><span class="agg-tag">🔒 Unit</span><div class="node u">📂 root</div></div>
+    <div class="arrow">maps to →</div>
+    <div class="tbl">
+      <div class="tbl-name">learning.units</div>
+      <div class="col"><span class="k">Id</span> <span class="pk">PK</span></div>
+      <div class="col ref"><span class="k">CourseId</span> <span class="idref">id ref → column, not a navigation</span></div>
+      <div class="col">Title</div>
+      <div class="col">Position</div>
+    </div>
+  </div>
+
+  <div class="pair">
+    <div class="agg"><span class="agg-tag">🔒 Lesson</span><div class="node l">📄 root</div></div>
+    <div class="arrow">maps to →</div>
+    <div class="tbl">
+      <div class="tbl-name">learning.lessons</div>
+      <div class="col"><span class="k">Id</span> <span class="pk">PK</span></div>
+      <div class="col ref"><span class="k">UnitId</span> <span class="idref">id ref → column, not a navigation</span></div>
+      <div class="col">Title</div>
+      <div class="col">Position</div>
+      <div class="col">IsPublished</div>
+    </div>
+  </div>
+</div>
+
+<div class="callout n1">
+  <span class="hlabel">Nuance 1 · reference by identity</span>
+  <code>CourseId</code> / <code>UnitId</code> are plain <strong>id columns</strong>. We deliberately do <em>not</em> add a <code>Unit.Course</code> navigation property — that would let code hop across aggregate boundaries (a train-wreck traversal). A DB-level foreign key for integrity is optional; the <em>object</em> reference is always id-only.
+</div>
+
+<div class="callout n2">
+  <span class="hlabel">Nuance 2 · aggregate ≠ table</span>
+  A root with <em>owned children</em> spans multiple tables but stays <strong>one</strong> aggregate — e.g. Engagement's <code>XpAccount</code> → <code>xp_accounts</code> + <code>applied_awards</code>. Here each root is a single entity with only value-object properties, so it's a clean <strong>1 aggregate = 1 table</strong>. That's a property of <em>this</em> model, not a general law.
+</div>
+
+<div class="callout n3">
+  <span class="hlabel">Module rule</span>
+  All three live in a new <code>learning</code> schema — one schema per module. No cross-schema JOIN to <code>engagement</code>; the only link across modules stays the <code>LessonCompleted</code> event.
+</div>
+
+<style>
+  code { font-size: .88em; padding: 1px 5px; border-radius: 5px; background: rgba(128,128,128,.16); }
+  .map { display: flex; flex-direction: column; gap: 14px; margin: 16px 0; }
+  .pair { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .node { display: inline-block; padding: 4px 12px; border-radius: 7px; border: 1px solid rgba(128,128,128,.4); background: rgba(128,128,128,.09); }
+  .node.c { border-color: rgba(90,140,255,.6);  background: rgba(90,140,255,.12); }
+  .node.u { border-color: rgba(80,190,140,.6);  background: rgba(80,190,140,.12); }
+  .node.l { border-color: rgba(255,170,70,.6);  background: rgba(255,170,70,.12); }
+  .agg {
+    border: 2px dashed rgba(128,128,128,.55); border-radius: 12px;
+    padding: 18px 12px 10px; position: relative; flex: 0 0 auto; min-width: 96px; text-align: center;
+  }
+  .agg-tag {
+    position: absolute; top: -11px; left: 12px; font-size: 11px; font-weight: 700;
+    padding: 1px 8px; border-radius: 8px; background: var(--bg, #1a1a1a); border: 1px solid rgba(128,128,128,.5);
+  }
+  .arrow { font-size: 12px; opacity: .7; white-space: nowrap; }
+  .tbl { border: 1px solid rgba(128,128,128,.4); border-radius: 10px; overflow: hidden; min-width: 240px; }
+  .tbl-name {
+    font-family: ui-monospace, monospace; font-size: 12px; font-weight: 700;
+    padding: 6px 12px; background: rgba(128,128,128,.14); border-bottom: 1px solid rgba(128,128,128,.3);
+  }
+  .col { font-size: 13px; padding: 4px 12px; border-bottom: 1px solid rgba(128,128,128,.14); }
+  .col:last-child { border-bottom: 0; }
+  .col.ref { background: rgba(90,140,255,.07); }
+  .k { font-family: ui-monospace, monospace; }
+  .pk { font-size: 10px; font-weight: 700; color: #5a8cff; margin-left: 6px; }
+  .idref { font-size: 11px; opacity: .75; margin-left: 6px; font-style: italic; }
+  .callout { border-radius: 10px; padding: 10px 14px; margin: 10px 0; font-size: 13px; line-height: 1.5; }
+  .callout.n1 { border: 1px solid rgba(90,140,255,.4);  background: rgba(90,140,255,.08); }
+  .callout.n2 { border: 1px solid rgba(80,190,140,.4);  background: rgba(80,190,140,.08); }
+  .callout.n3 { border: 1px solid rgba(255,170,70,.4);  background: rgba(255,170,70,.08); }
+  .hlabel { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .6px; font-weight: 700; opacity: .85; margin-bottom: 4px; }
+</style>

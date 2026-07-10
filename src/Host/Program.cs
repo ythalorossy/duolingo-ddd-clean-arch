@@ -2,7 +2,8 @@ using BuildingBlocks.Mediator;
 using Engagement.Application;
 using Engagement.Infrastructure;
 using Host;
-using Learning.Stub;
+using Learning.Application;
+using Learning.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,14 +12,18 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HeaderCurrentUser>();
 
 builder.Services.AddMediator(
-    typeof(GetXpAccount).Assembly,   // Engagement.Application handlers
-    LearningStubExtensions.Assembly);         // Learning.Stub handlers
+    typeof(GetXpAccount).Assembly,        // Engagement.Application handlers
+    typeof(CompleteLesson).Assembly);     // Learning.Application handlers
 
 builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
 
 builder.Services.AddEngagementInfrastructure(
     builder.Configuration.GetConnectionString("Engagement")
     ?? throw new InvalidOperationException("Missing ConnectionStrings:Engagement"));
+
+builder.Services.AddLearningInfrastructure(
+    builder.Configuration.GetConnectionString("Learning")
+    ?? throw new InvalidOperationException("Missing ConnectionStrings:Learning"));
 
 // League weeks close automatically: a BackgroundService periodically settles any ended-but-unsettled
 // week. Feature-flagged so the E2E test hosts can disable it (they jump a shared FakeTimeProvider).
@@ -33,9 +38,24 @@ var app = builder.Build();
 app.MapPost("/lessons/{lessonId:guid}/complete",
     async (Guid lessonId, ICurrentUser user, IMediator mediator, CancellationToken ct) =>
     {
-        await mediator.SendAsync(new CompleteLesson(user.LearnerId, lessonId), ct);
-        return Results.Accepted();
+        try
+        {
+            await mediator.SendAsync(new CompleteLesson(user.LearnerId, lessonId), ct);
+            return Results.Ok(); // work (incl. the XP award) runs in-process before we return
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return Results.NotFound(new { error = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.Conflict(new { error = ex.Message }); // lesson exists but is not completable
+        }
     });
+
+app.MapGet("/courses",
+    async (IMediator mediator, CancellationToken ct) =>
+        Results.Ok(await mediator.SendAsync(new GetCatalog(), ct)));
 
 app.MapGet("/me/xp",
     async (ICurrentUser user, IMediator mediator, CancellationToken ct) =>

@@ -1,0 +1,85 @@
+<h2>Completion behavior + idempotency</h2>
+<p class="subtitle">The stub blindly published <code>LessonCompleted</code> with a random id. Now the handler (moved to <code>Learning.Application</code>) loads a real <code>Lesson</code>, validates it, and only then publishes. The one real decision is at the bottom.</p>
+
+<div class="flow">
+  <div class="step ep">POST /lessons/{id}/complete</div>
+  <div class="ar">→</div>
+  <div class="step">CompleteLesson<br><small>Learning.Application</small></div>
+  <div class="ar">→</div>
+  <div class="step">load Lesson by id<br><small>ILessonRepository</small></div>
+  <div class="ar">→</div>
+  <div class="step gate">validate</div>
+  <div class="ar">→</div>
+  <div class="step pub">publish LessonCompleted</div>
+  <div class="ar">⇢</div>
+  <div class="step ext">Engagement awards XP<br><small>(unchanged)</small></div>
+</div>
+
+<div class="valid">
+  <span class="hlabel">Validation — surfaced the house way (throw → endpoint <code>try/catch</code> maps it)</span>
+  <div class="vrow"><span class="cond">lesson id unknown</span><span class="res r404">404 Not Found</span></div>
+  <div class="vrow"><span class="cond">lesson exists but <code>IsPublished == false</code></span><span class="res r409">409 Conflict</span></div>
+  <div class="vrow"><span class="cond">published → publish event</span><span class="res rok">200 OK</span> <span class="small">(202→200: the XP award runs in-process, so it's done when we return)</span></div>
+</div>
+
+<h3 style="margin-top:22px">The decision — does re-completing a lesson re-award XP?</h3>
+<div class="options" style="display:block">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Repeatable — fresh event each time <span class="rec">recommended</span></h3>
+      <p>Each completion gets a new random <code>EventId</code> → <code>LessonCompleted</code> → Engagement awards XP <strong>every time</strong>. A lesson is a repeatable action (Duolingo "practice"), and this preserves today's behavior.</p>
+      <p class="note"><span class="plus">+</span> True skeleton — no per-learner memory needed. The <code>AppliedAward</code> ledger still dedups genuine <em>redelivery</em> of the same <code>EventId</code> (a no-op in-process today, but correct for a future outbox). <br><span class="plus">→</span> "Award once per lesson" / "reduced XP on repeat" is the <strong>progress economy = Slice 3</strong>, where per-learner completion history actually lives.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Once per lesson — deterministic <code>SourceId</code></h3>
+      <p>Derive <code>SourceId = f(LearnerId, LessonId)</code> so the ledger awards XP <strong>exactly once ever</strong> per lesson. Tempting: "first completion only" for free, with no progress tracking.</p>
+      <p class="note anti"><span class="minus">✗ the trap</span> This smuggles a <em>business rule</em> ("only the first completion earns XP") into the <em>idempotency mechanism</em> (whose only job is "don't process the same event twice"). The ledger would then mean two things at once, and you couldn't add "reduced XP on repeat" later without untangling it. That rule belongs to an explicit <strong>progress</strong> aggregate in Slice 3 — not the dedup key.</p>
+    </div>
+  </div>
+</div>
+
+<div class="notes-final">
+  <span class="hlabel">Also settled (not decisions — just applying house rules)</span>
+  <ul>
+    <li><code>OccurredOn</code> comes from an injected <code>TimeProvider</code>, not <code>DateTimeOffset.UtcNow</code> (fixes a stub shortcut; keeps it testable via <code>FakeTimeProvider</code>).</li>
+    <li>The <code>LessonCompleted</code> contract is <strong>unchanged</strong> — still XP-free (<code>EventId, LearnerId, LessonId, OccurredOn</code>). Learning stays ignorant of XP; Engagement's policy still decides the amount.</li>
+    <li><code>Learning.Stub</code> is deleted; <code>CompleteLesson</code> moves to <code>Learning.Application</code> and the Host references the real module.</li>
+  </ul>
+</div>
+
+<style>
+  code { font-size: .88em; padding: 1px 5px; border-radius: 5px; background: rgba(128,128,128,.16); }
+  .flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 16px 0; }
+  .step { border: 1px solid rgba(128,128,128,.4); border-radius: 9px; padding: 8px 11px; font-size: 12.5px; text-align: center; background: rgba(128,128,128,.07); }
+  .step small { opacity: .65; font-size: 10.5px; }
+  .step.ep  { border-color: rgba(90,140,255,.6);  background: rgba(90,140,255,.12); font-family: ui-monospace, monospace; }
+  .step.gate{ border-color: rgba(255,170,70,.6);  background: rgba(255,170,70,.12); }
+  .step.pub { border-color: rgba(80,190,140,.6);  background: rgba(80,190,140,.12); }
+  .step.ext { opacity: .75; border-style: dashed; }
+  .ar { opacity: .55; font-size: 16px; }
+  .valid { border: 1px solid rgba(128,128,128,.35); border-radius: 10px; padding: 12px 16px; margin: 8px 0; }
+  .vrow { display: flex; align-items: center; gap: 12px; padding: 5px 0; font-size: 13px; border-bottom: 1px solid rgba(128,128,128,.12); }
+  .vrow:last-child { border-bottom: 0; }
+  .cond { min-width: 260px; }
+  .res { font-family: ui-monospace, monospace; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+  .r404 { background: rgba(224,103,79,.18); color: #e0674f; }
+  .r409 { background: rgba(255,170,70,.18); color: #e0954f; }
+  .rok  { background: rgba(80,190,140,.18); color: #35b877; }
+  .small { font-size: 11px; opacity: .7; }
+  .options { display: block !important; }
+  .option { width: 100%; align-items: flex-start; }
+  .note { font-size: 12.5px; opacity: .86; margin-top: 8px; line-height: 1.55; }
+  .note.anti { opacity: .95; }
+  .plus  { color: #35b877; font-weight: 700; }
+  .minus { color: #e0674f; font-weight: 700; }
+  .rec { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; background: rgba(80,180,120,.18); border: 1px solid rgba(80,180,120,.5); color: #35b877; padding: 2px 7px; border-radius: 10px; margin-left: 8px; vertical-align: middle; font-weight: 700; }
+  .notes-final { border: 1px solid rgba(128,128,128,.35); background: rgba(128,128,128,.05); border-radius: 10px; padding: 12px 16px; margin: 18px 0 6px; font-size: 13px; line-height: 1.55; }
+  .notes-final ul { margin: 6px 0 0; padding-left: 18px; }
+  .notes-final li { margin: 5px 0; }
+  .hlabel { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .6px; font-weight: 700; opacity: .85; margin-bottom: 6px; }
+</style>

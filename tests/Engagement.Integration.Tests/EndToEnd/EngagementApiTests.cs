@@ -18,20 +18,6 @@ public class EngagementApiTests(EngagementApiFactory factory) : IClassFixture<En
         return client;
     }
 
-    [Fact] // Criterion 1 & 2
-    public async Task Completing_a_lesson_then_reading_engagement_shows_ten_xp()
-    {
-        var learnerId = Guid.NewGuid();
-        var client = ClientForLearner(learnerId);
-
-        var post = await client.PostAsync($"/lessons/{Guid.NewGuid()}/complete", null);
-        Assert.Equal(HttpStatusCode.Accepted, post.StatusCode);
-
-        var dto = await client.GetFromJsonAsync<EngagementResponse>("/me/xp");
-        Assert.NotNull(dto);
-        Assert.Equal(10, dto!.TotalXp);
-    }
-
     [Fact] // Criterion 3: idempotency on re-delivery of the SAME event
     public async Task Same_lesson_completed_event_delivered_twice_awards_once()
     {

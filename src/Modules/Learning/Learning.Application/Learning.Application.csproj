@@ -1,6 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\Learning.Domain\Learning.Domain.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Contracts\BuildingBlocks.Contracts.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Mediator\BuildingBlocks.Mediator.csproj" />
   </ItemGroup>

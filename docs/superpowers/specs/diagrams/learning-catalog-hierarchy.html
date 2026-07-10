@@ -1,0 +1,92 @@
+<h2>How deep should the content catalog go?</h2>
+<p class="subtitle">Learning is a <strong>supporting</strong> subdomain — the discipline here is <em>restraint</em>. Deep enough to be a real tree, shallow enough to avoid gold-plating. This choice also sets the aggregate boundaries we'll draw on the next screen.</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Flat — Course → Lesson</h3>
+      <p>Two entities. The leanest thing that still points at real content.</p>
+      <div class="tree">
+        <div class="node c">📘 Course · &ldquo;Spanish&rdquo;</div>
+        <div class="kids">
+          <div class="node l">📄 Lesson · &ldquo;Basics 1&rdquo;</div>
+          <div class="node l">📄 Lesson · &ldquo;Basics 2&rdquo;</div>
+          <div class="node l">📄 Lesson · &ldquo;Basics 3&rdquo;</div>
+        </div>
+      </div>
+      <p class="note"><span class="plus">+</span> Simplest possible. &nbsp; <span class="minus">&minus;</span> No grouping for Slice 3's skill-tree / &ldquo;unlock next unit&rdquo;.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Grouped — Course → Unit → Lesson <span class="rec">recommended</span></h3>
+      <p>A real 3-level tree. Ordering and &ldquo;next lesson / next unit&rdquo; become meaningful — but we skip Duolingo's Section and Skill layers.</p>
+      <div class="tree">
+        <div class="node c">📘 Course · &ldquo;Spanish&rdquo;</div>
+        <div class="kids">
+          <div class="node u">📂 Unit · &ldquo;Basics&rdquo;</div>
+          <div class="kids">
+            <div class="node l">📄 Lesson · &ldquo;Greetings&rdquo;</div>
+            <div class="node l">📄 Lesson · &ldquo;The verb <em>ser</em>&rdquo;</div>
+          </div>
+          <div class="node u">📂 Unit · &ldquo;Food&rdquo;</div>
+          <div class="kids">
+            <div class="node l">📄 Lesson · &ldquo;At the café&rdquo;</div>
+          </div>
+        </div>
+      </div>
+      <p class="note"><span class="plus">+</span> Real tree, sets up Slice 3 cleanly, still lean. &nbsp; <span class="minus">&minus;</span> One more entity than A.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Deep — Course → Section → Unit → Skill → Lesson</h3>
+      <p>The real Duolingo shape. Five levels.</p>
+      <div class="tree">
+        <div class="node c">📘 Course</div>
+        <div class="kids">
+          <div class="node s">🗂️ Section</div>
+          <div class="kids">
+            <div class="node u">📂 Unit</div>
+            <div class="kids">
+              <div class="node sk">🎯 Skill</div>
+              <div class="kids">
+                <div class="node l">📄 Lesson</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="note"><span class="plus">+</span> Most realistic. &nbsp; <span class="minus">&minus;</span> Gold-plating a <em>supporting</em> domain — five aggregates to map, seed, and test for a skeleton.</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .tree { margin: 12px 0 6px; font-size: 13px; line-height: 1.5; }
+  .node {
+    display: inline-block; padding: 3px 10px; margin: 3px 0;
+    border-radius: 7px; border: 1px solid rgba(128,128,128,.35);
+    background: rgba(128,128,128,.09); white-space: nowrap;
+  }
+  .kids { margin-left: 16px; border-left: 2px solid rgba(128,128,128,.28); padding-left: 14px; }
+  .node.c  { border-color: rgba(90,140,255,.55);  background: rgba(90,140,255,.12); }
+  .node.s  { border-color: rgba(180,120,255,.55); background: rgba(180,120,255,.12); }
+  .node.u  { border-color: rgba(80,190,140,.55);  background: rgba(80,190,140,.12); }
+  .node.sk { border-color: rgba(255,170,70,.55);  background: rgba(255,170,70,.12); }
+  .node.l  { border-color: rgba(128,128,128,.4); }
+  .note { font-size: 12px; opacity: .82; margin-top: 10px; }
+  .plus  { color: #35b877; font-weight: 700; }
+  .minus { color: #e0674f; font-weight: 700; }
+  .rec {
+    font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
+    background: rgba(80,180,120,.18); border: 1px solid rgba(80,180,120,.5);
+    color: #35b877; padding: 2px 7px; border-radius: 10px; margin-left: 8px;
+    vertical-align: middle; font-weight: 700;
+  }
+</style>
