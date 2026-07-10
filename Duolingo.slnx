@@ -19,7 +19,6 @@
     <Project Path="src/Modules/Engagement/Engagement.Infrastructure/Engagement.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/src/Modules/Learning/">
-    <Project Path="src/Modules/Learning/Learning.Stub/Learning.Stub.csproj" />
     <Project Path="src/Modules/Learning/Learning.Application/Learning.Application.csproj" />
     <Project Path="src/Modules/Learning/Learning.Domain/Learning.Domain.csproj" />
     <Project Path="src/Modules/Learning/Learning.Infrastructure/Learning.Infrastructure.csproj" />
