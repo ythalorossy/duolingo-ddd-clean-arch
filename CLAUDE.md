@@ -61,10 +61,12 @@ src/
   Host/                              ASP.NET Core composition root + Minimal API endpoints
   BuildingBlocks/{Domain,Mediator,Contracts}
   Modules/Engagement/{Engagement.Domain, .Application, .Infrastructure}
-  Modules/Learning/Learning.Stub     disposable event producer (real Learning comes later)
+  Modules/Learning/{Learning.Domain, .Application, .Infrastructure}   content catalog + real completion
 tests/
   Engagement.Domain.Tests            fast pure-domain unit tests
   Engagement.Integration.Tests       mediator, application, persistence, e2e, architecture
+  Learning.Domain.Tests              fast pure-domain unit tests
+  Learning.Integration.Tests         handler, persistence, catalog, e2e, architecture
 docs/
   superpowers/specs/                 design specs (+ archived diagrams)
   superpowers/plans/                 implementation plans
@@ -95,7 +97,7 @@ dotnet ef migrations add <Name> `
   shared name races `EnsureDeleted`.
 - **`FakeTimeProvider` is forward-only** (`SetUtcNow` throws going backward). E2E classes sharing a
   factory share its clock, so a test needing a different time window needs its own factory.
-- The running Host uses `DuolingoEngagement` (see `appsettings.json`).
+- The running Host uses `DuolingoEngagement` and `DuolingoLearning` (see `appsettings.json`).
 - **Known gap / TODO:** the Host does **not** auto-apply migrations on startup yet, and only
   `Engagement.Infrastructure` references `Microsoft.EntityFrameworkCore.Design`. To run the
   app against a populated dev DB today you must apply the schema manually. A startup
@@ -152,5 +154,15 @@ implementation**. Each sub-project gets its own branch (`feat/<name>`) and PR.
   the Slice-2 marker). `PeriodicTimer` is fed the injected `TimeProvider` (so `FakeTimeProvider` drives
   it in tests); disabled in the E2E hosts via `Leagues:Settlement:Enabled=false`. New repo query
   `GetDistinctEndedWeeksAsync`; no schema change / no migration.
-- ⏭️ **Next:** real Learning engine → real Identity (and a real freeze economy — earning/buying —
-  when Billing exists); a subscriber for the `Promoted`/`Demoted` events.
+- ✅ **Sub-project 5 — Learning, Slice 1 (catalog + real completion)** (PR #7): replaced the disposable
+  `Learning.Stub` with a real Learning module (Domain·Application·Infrastructure). **Course → Unit → Lesson**
+  as three aggregate roots referenced by id (typed-id + `Title` value objects); `POST /lessons/{id}/complete`
+  loads a real `Lesson`, enforces `Lesson.EnsureCompletable()` (the `IsPublished` gate), and publishes the
+  unchanged, XP-free `LessonCompleted` — **200 / 404 (unknown) / 409 (unpublished)**, repeatable (dedup
+  deferred to Slice 3). New `GET /courses` read model; own `DuolingoLearning` database + `learning` schema,
+  seeded via EF `HasData` (one lesson left unpublished). NetArchTest locks the boundaries (Domain pure; no
+  `Learning → Engagement` refs).
+- ⏭️ **Next:** **Learning Slice 2** (exercise engine + grading — completion becomes *earned* via a passing
+  attempt) → **Slice 3** (per-learner progress / mastery / unlocking, plus the completion economy:
+  once-per-lesson credit, reduced XP on repeat) → real Identity (and a real freeze economy when Billing
+  exists); a subscriber for the `Promoted`/`Demoted` events.
