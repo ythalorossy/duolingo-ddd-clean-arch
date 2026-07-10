@@ -1,0 +1,109 @@
+<h2>Where do the aggregate boundaries fall?</h2>
+<p class="subtitle">An <strong>aggregate</strong> is a transactional consistency boundary — and the unit you load &amp; save together. The tree is Course → Unit → Lesson; the question is how many boxes we draw around it.</p>
+
+<div class="heuristic">
+  <span class="hlabel">The tell</span>
+  A thing referenced from <em>outside</em> by a global id is an aggregate <strong>root</strong>. Here, lessons are already addressed by global id — <code>POST /lessons/{lessonId}/complete</code> and <code>LessonCompleted.LessonId</code>. That fingerprint matters below.
+</div>
+
+<div class="options" style="display:block">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>One aggregate — <code>Course</code> owns Units &amp; Lessons</h3>
+      <p>The whole tree is one consistency boundary. Units and Lessons are <em>entities inside</em> Course, with only local identity.</p>
+      <div class="agg whole">
+        <span class="agg-tag">🔒 Aggregate root: Course</span>
+        <div class="node c">📘 Course “Spanish”</div>
+        <div class="kids">
+          <div class="node u">📂 Unit “Basics”</div>
+          <div class="kids">
+            <div class="node l">📄 Lesson “Greetings”</div>
+            <div class="node l">📄 Lesson “ser”</div>
+          </div>
+        </div>
+      </div>
+      <p class="note"><span class="plus">+</span> Ordering invariants (unit/lesson sequence) enforced in one place. <span class="minus">&minus;</span> To complete lesson X you must find &amp; load its <em>whole</em> Course — but the endpoint only has a <code>lessonId</code>. Fights how we actually address lessons.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Three aggregates — <code>Course</code>, <code>Unit</code>, <code>Lesson</code>, linked by id <span class="rec">recommended</span></h3>
+      <p>Each is its own root. A Unit holds a <code>CourseId</code>; a Lesson holds a <code>UnitId</code>. No object holds another aggregate — only its id.</p>
+      <div class="row">
+        <div class="agg"><span class="agg-tag">🔒 Course</span><div class="node c">📘 Course</div></div>
+        <div class="ref">◀ holds <code>CourseId</code></div>
+        <div class="agg"><span class="agg-tag">🔒 Unit</span><div class="node u">📂 Unit</div></div>
+        <div class="ref">◀ holds <code>UnitId</code></div>
+        <div class="agg"><span class="agg-tag">🔒 Lesson</span><div class="node l">📄 Lesson</div></div>
+      </div>
+      <p class="note"><span class="plus">+</span> Completion loads just the <code>Lesson</code> by its id — exactly what Slice 1 needs. Small aggregates, references by identity (the house style). <span class="minus">&minus;</span> Cross-tree invariants (ordering) aren't transactional — fine for seeded reference data.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Two aggregates — <code>Course</code> owns Units; <code>Lesson</code> stands alone</h3>
+      <p>The small, cohesive course/unit <em>structure</em> is one aggregate; the globally-referenced, growing Lesson is its own root holding a <code>UnitId</code>.</p>
+      <div class="row">
+        <div class="agg">
+          <span class="agg-tag">🔒 Course (root) + Units</span>
+          <div class="node c">📘 Course</div>
+          <div class="kids"><div class="node u">📂 Unit “Basics”</div><div class="node u">📂 Unit “Food”</div></div>
+        </div>
+        <div class="ref">◀ holds <code>UnitId</code></div>
+        <div class="agg"><span class="agg-tag">🔒 Lesson</span><div class="node l">📄 Lesson</div></div>
+      </div>
+      <p class="note"><span class="plus">+</span> Structure stays cohesive; the hot, referenceable entity is independent. <span class="minus">&minus;</span> Two boundary styles to hold in your head — a touch more than a skeleton needs.</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .options { display: block !important; }
+  .option { width: 100%; align-items: flex-start; }
+  .heuristic {
+    border: 1px solid rgba(90,140,255,.4); background: rgba(90,140,255,.08);
+    border-radius: 10px; padding: 10px 14px; margin: 6px 0 18px; font-size: 13px; line-height: 1.5;
+  }
+  .hlabel {
+    display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
+    font-weight: 700; color: #5a8cff; margin-right: 8px;
+  }
+  code { font-size: .88em; padding: 1px 5px; border-radius: 5px; background: rgba(128,128,128,.16); }
+  .tree, .agg { font-size: 13px; line-height: 1.5; }
+  .node {
+    display: inline-block; padding: 3px 10px; margin: 3px 0;
+    border-radius: 7px; border: 1px solid rgba(128,128,128,.4);
+    background: rgba(128,128,128,.09); white-space: nowrap;
+  }
+  .kids { margin-left: 16px; border-left: 2px solid rgba(128,128,128,.28); padding-left: 14px; }
+  .node.c { border-color: rgba(90,140,255,.6);  background: rgba(90,140,255,.12); }
+  .node.u { border-color: rgba(80,190,140,.6);  background: rgba(80,190,140,.12); }
+  .node.l { border-color: rgba(255,170,70,.6);  background: rgba(255,170,70,.12); }
+  .agg {
+    border: 2px dashed rgba(128,128,128,.55); border-radius: 12px;
+    padding: 20px 14px 12px; margin: 10px 0; position: relative; display: inline-block;
+    vertical-align: middle;
+  }
+  .agg.whole { display: block; }
+  .agg-tag {
+    position: absolute; top: -11px; left: 12px; font-size: 11px; font-weight: 700;
+    padding: 1px 8px; border-radius: 8px; background: var(--bg, #1a1a1a);
+    border: 1px solid rgba(128,128,128,.5);
+  }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 8px 0; }
+  .ref { font-size: 11px; opacity: .8; padding: 0 6px; white-space: nowrap; }
+  .note { font-size: 12px; opacity: .84; margin-top: 12px; }
+  .plus  { color: #35b877; font-weight: 700; }
+  .minus { color: #e0674f; font-weight: 700; }
+  .rec {
+    font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
+    background: rgba(80,180,120,.18); border: 1px solid rgba(80,180,120,.5);
+    color: #35b877; padding: 2px 7px; border-radius: 10px; margin-left: 8px;
+    vertical-align: middle; font-weight: 700;
+  }
+</style>

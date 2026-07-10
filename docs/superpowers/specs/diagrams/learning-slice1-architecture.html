@@ -1,0 +1,91 @@
+<h2>Slice 1 at a glance — the walking skeleton</h2>
+<p class="subtitle">A real <code>Learning</code> module (Domain · Application · Infrastructure) replaces the stub. The seam to Engagement is <strong>unchanged</strong> — that's the whole point: prove "real lesson → completion → event → XP" end-to-end.</p>
+
+<div class="lane-label">Runtime flow</div>
+<div class="flow">
+  <div class="step ep">POST /lessons/{id}/complete</div>
+  <div class="ar">→</div>
+  <div class="step">CompleteLesson<br><small>load Lesson · validate</small></div>
+  <div class="ar">→</div>
+  <div class="step pub">publish<br>LessonCompleted</div>
+  <div class="ar dash">⇢ in-process</div>
+  <div class="step ext">AwardXpForLessonCompleted<br><small>Engagement · unchanged</small></div>
+  <div class="ar">→</div>
+  <div class="step ext">XpAwarded ⇢ streaks &amp; leagues<br><small>unchanged</small></div>
+</div>
+<div class="flow second">
+  <div class="step ep">GET /courses</div>
+  <div class="ar">→</div>
+  <div class="step">GetCatalog query</div>
+  <div class="ar">→</div>
+  <div class="step ext">CatalogDto <small>(nested courses → units → lessons)</small></div>
+</div>
+
+<div class="lane-label">The Learning module (new) — dependencies point inward</div>
+<div class="clean">
+  <div class="layer host">
+    <div class="lname">Host</div>
+    <div class="item">POST /lessons/{id}/complete <span class="tag new">real</span></div>
+    <div class="item">GET /courses <span class="tag new">new</span></div>
+  </div>
+  <div class="layer infra">
+    <div class="lname">Infrastructure</div>
+    <div class="item">LearningDbContext <small>(learning schema)</small></div>
+    <div class="item">LessonRepository <small>(read: GetById)</small></div>
+    <div class="item">Course/Unit/Lesson EF configs + <b>seed</b></div>
+    <div class="item">Migration · AddLearningInfrastructure(DI)</div>
+  </div>
+  <div class="layer app">
+    <div class="lname">Application</div>
+    <div class="item">CompleteLesson (command + handler)</div>
+    <div class="item">GetCatalog (query + CatalogDto)</div>
+  </div>
+  <div class="layer domain">
+    <div class="lname">Domain <small>(references nothing infra)</small></div>
+    <div class="item">Course · Unit · Lesson <small>(aggregate roots)</small></div>
+    <div class="item">CourseId · UnitId · LessonId · Title <small>(VOs)</small></div>
+    <div class="item">Lesson.EnsureCompletable() <small>(published gate)</small></div>
+    <div class="item">ILessonRepository <small>(port)</small></div>
+  </div>
+</div>
+
+<div class="schema">
+  <span class="hlabel">learning schema — seeded reference data (no runtime writes in Slice 1)</span>
+  <div class="tbls">
+    <span class="tb">learning.courses</span>
+    <span class="tb">learning.units → CourseId</span>
+    <span class="tb">learning.lessons → UnitId</span>
+  </div>
+  <div class="seamnote">Cross-module link stays the <code>LessonCompleted</code> event only — no cross-schema JOIN to <code>engagement</code>.</div>
+</div>
+
+<style>
+  code { font-size: .88em; padding: 1px 5px; border-radius: 5px; background: rgba(128,128,128,.16); }
+  .lane-label { font-size: 10px; text-transform: uppercase; letter-spacing: .7px; font-weight: 700; opacity: .7; margin: 18px 0 8px; }
+  .flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .flow.second { margin-top: 10px; }
+  .step { border: 1px solid rgba(128,128,128,.4); border-radius: 9px; padding: 8px 11px; font-size: 12.5px; text-align: center; background: rgba(128,128,128,.07); }
+  .step small { opacity: .65; font-size: 10.5px; }
+  .step.ep  { border-color: rgba(90,140,255,.6); background: rgba(90,140,255,.12); font-family: ui-monospace, monospace; }
+  .step.pub { border-color: rgba(80,190,140,.6); background: rgba(80,190,140,.12); }
+  .step.ext { opacity: .72; border-style: dashed; }
+  .ar { opacity: .55; font-size: 15px; }
+  .ar.dash { font-size: 11px; opacity: .6; }
+  .clean { border: 2px solid rgba(90,140,255,.35); border-radius: 12px; padding: 10px; }
+  .layer { border-radius: 9px; padding: 9px 12px; margin: 7px; }
+  .layer .lname { font-weight: 800; font-size: 12px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
+  .layer .lname small { text-transform: none; letter-spacing: 0; opacity: .6; font-weight: 500; }
+  .layer.host   { background: rgba(90,140,255,.08);  border: 1px solid rgba(90,140,255,.3); }
+  .layer.infra  { background: rgba(255,170,70,.07);   border: 1px solid rgba(255,170,70,.3); }
+  .layer.app    { background: rgba(180,120,255,.07);  border: 1px solid rgba(180,120,255,.3); }
+  .layer.domain { background: rgba(80,190,140,.08);   border: 1px solid rgba(80,190,140,.35); }
+  .item { font-size: 12.5px; padding: 3px 0; }
+  .item small { opacity: .62; }
+  .tag { font-size: 9px; text-transform: uppercase; letter-spacing: .5px; font-weight: 700; padding: 1px 6px; border-radius: 8px; margin-left: 6px; }
+  .tag.new { background: rgba(80,190,140,.2); color: #35b877; border: 1px solid rgba(80,190,140,.5); }
+  .schema { margin-top: 16px; border: 1px solid rgba(128,128,128,.35); border-radius: 10px; padding: 12px 16px; }
+  .tbls { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 8px; }
+  .tb { font-family: ui-monospace, monospace; font-size: 12px; padding: 4px 10px; border-radius: 7px; background: rgba(128,128,128,.12); border: 1px solid rgba(128,128,128,.3); }
+  .seamnote { font-size: 12px; opacity: .8; }
+  .hlabel { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .6px; font-weight: 700; opacity: .85; margin-bottom: 6px; }
+</style>

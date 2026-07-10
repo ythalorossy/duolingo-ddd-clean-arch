@@ -1,0 +1,72 @@
+<h2>What each aggregate holds</h2>
+<p class="subtitle">Fields and their types. Typed ids as value objects are non-negotiable house style (they mirror <code>LearnerId</code>). Everything tagged <span class="chip dec">decision</span> is a call I'd like you to make.</p>
+
+<div class="classes">
+  <div class="cls">
+    <div class="cls-head"><span class="cls-name">Course</span><span class="stereo">«aggregate root»</span></div>
+    <div class="f"><span class="fn">Id</span><span class="ft vo">CourseId</span></div>
+    <div class="f"><span class="fn">Title</span><span class="ft vo">Title</span><span class="chip dec">VO or string?</span></div>
+    <div class="f dim"><span class="fn">Language</span><span class="ft prim">string</span><span class="chip opt">optional</span></div>
+  </div>
+
+  <div class="cls">
+    <div class="cls-head"><span class="cls-name">Unit</span><span class="stereo">«aggregate root»</span></div>
+    <div class="f"><span class="fn">Id</span><span class="ft vo">UnitId</span></div>
+    <div class="f"><span class="fn">CourseId</span><span class="ft idref">CourseId</span><span class="chip ref">id ref</span></div>
+    <div class="f"><span class="fn">Title</span><span class="ft vo">Title</span></div>
+    <div class="f"><span class="fn">Position</span><span class="ft prim">int</span></div>
+  </div>
+
+  <div class="cls">
+    <div class="cls-head"><span class="cls-name">Lesson</span><span class="stereo">«aggregate root»</span></div>
+    <div class="f"><span class="fn">Id</span><span class="ft vo">LessonId</span></div>
+    <div class="f"><span class="fn">UnitId</span><span class="ft idref">UnitId</span><span class="chip ref">id ref</span></div>
+    <div class="f"><span class="fn">Title</span><span class="ft vo">Title</span></div>
+    <div class="f"><span class="fn">Position</span><span class="ft prim">int</span></div>
+    <div class="f"><span class="fn">IsPublished</span><span class="ft prim">bool</span><span class="chip dec">include?</span></div>
+  </div>
+</div>
+
+<div class="vos">
+  <span class="hlabel">Value objects (inherit <code>BuildingBlocks.Domain.ValueObject</code>)</span>
+  <ul>
+    <li><code>CourseId</code>, <code>UnitId</code>, <code>LessonId</code> — <strong>Guid</strong> wrappers. Kill primitive obsession, give value-equality, serve as keys. Exactly like <code>LearnerId</code>. <em>(not up for debate — this is the pattern)</em></li>
+    <li><code>Title</code> — one shared VO: non-empty, trimmed, bounded length. Or… a plain <code>string</code>, if we want the supporting domain leaner. <span class="chip dec">decision</span></li>
+    <li><code>Position</code> — kept a plain <code>int</code> (an ordering index). A VO would be gold-plating here.</li>
+  </ul>
+</div>
+
+<div class="calls">
+  <span class="hlabel">Two calls to make</span>
+  <div class="call"><span class="num">1</span> <strong>IsPublished on Lesson?</strong> — gives completion a real domain gate (complete a <em>published</em> lesson) vs. existence-only. One bool + one guard.</div>
+  <div class="call"><span class="num">2</span> <strong>Title: value object or plain string?</strong> — house consistency &amp; invariants vs. leanness for a supporting domain.</div>
+</div>
+
+<style>
+  code { font-size: .88em; padding: 1px 5px; border-radius: 5px; background: rgba(128,128,128,.16); }
+  .classes { display: flex; gap: 16px; flex-wrap: wrap; margin: 16px 0; }
+  .cls { border: 1px solid rgba(128,128,128,.4); border-radius: 10px; overflow: hidden; min-width: 210px; flex: 1 1 210px; }
+  .cls-head { padding: 8px 12px; background: rgba(90,140,255,.12); border-bottom: 1px solid rgba(128,128,128,.3); }
+  .cls-name { font-weight: 800; font-size: 15px; }
+  .stereo { font-size: 11px; opacity: .7; margin-left: 8px; font-style: italic; }
+  .f { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid rgba(128,128,128,.14); font-size: 13px; }
+  .f:last-child { border-bottom: 0; }
+  .f.dim { opacity: .6; }
+  .fn { font-family: ui-monospace, monospace; min-width: 78px; }
+  .ft { font-family: ui-monospace, monospace; font-size: 12px; padding: 1px 7px; border-radius: 6px; }
+  .ft.vo    { background: rgba(80,190,140,.16);  color: #35b877; }
+  .ft.idref { background: rgba(90,140,255,.16);  color: #5a8cff; }
+  .ft.prim  { background: rgba(128,128,128,.16); }
+  .chip { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; font-weight: 700; padding: 1px 6px; border-radius: 8px; }
+  .chip.dec { background: rgba(255,170,70,.18);  color: #e0954f; border: 1px solid rgba(255,170,70,.5); }
+  .chip.opt { background: rgba(128,128,128,.16); opacity: .8; }
+  .chip.ref { background: rgba(90,140,255,.16);  color: #5a8cff; }
+  .vos, .calls { border-radius: 10px; padding: 12px 16px; margin: 12px 0; font-size: 13px; line-height: 1.55; }
+  .vos   { border: 1px solid rgba(80,190,140,.4); background: rgba(80,190,140,.07); }
+  .calls { border: 1px solid rgba(255,170,70,.4); background: rgba(255,170,70,.07); }
+  .vos ul { margin: 6px 0 0; padding-left: 18px; }
+  .vos li { margin: 4px 0; }
+  .hlabel { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .6px; font-weight: 700; opacity: .85; margin-bottom: 6px; }
+  .call { margin: 8px 0; }
+  .num { display: inline-block; width: 20px; height: 20px; line-height: 20px; text-align: center; border-radius: 50%; background: rgba(255,170,70,.25); color: #e0954f; font-weight: 800; font-size: 12px; margin-right: 6px; }
+</style>
