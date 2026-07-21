@@ -1,0 +1,47 @@
+<h2>Q5 — Where does the grading logic live?</h2>
+<p class="subtitle">Grading needs three things — the <b>exercises</b>, their <b>correct answers</b>, and the <b>pass threshold</b> — and produces a <b>Score</b> + <b>Outcome</b>. All three inputs live on <code>Lesson</code>; the result is recorded by <code>Attempt</code>. So <em>who orchestrates the tally?</em></p>
+
+<style>
+  .opt { border:1px solid rgba(255,255,255,.18); border-radius:10px; padding:12px 14px; margin:10px 0; background:rgba(255,255,255,.03); }
+  .opt h3 { margin:0 0 6px; }
+  .flow { font-family:ui-monospace,monospace; font-size:12.5px; background:rgba(0,0,0,.25); border-radius:6px; padding:8px 10px; margin:8px 0; line-height:1.7; }
+  .flow b { color:#6aa9ff; }
+  .k { color:#ffcf5c; }
+  .g { color:#8bd450; }
+  .note { font-size:13px; opacity:.82; }
+  .tag { display:inline-block; font-size:11px; padding:1px 7px; border-radius:10px; background:rgba(255,255,255,.1); margin-left:6px; }
+  .shared { border:1px dashed rgba(255,207,92,.5); border-radius:8px; padding:8px 10px; margin:14px 0; background:rgba(255,207,92,.06); font-size:13px; }
+</style>
+
+<div class="shared">
+  <b>Shared by all three options:</b> each <code>Exercise</code> entity answers <code class="g">IsCorrect(choice) → bool</code> (tell-don't-ask). The raw <span class="k">correct answer 🔒</span> never leaves the <code>Exercise</code> — the grader only ever asks "is <em>this</em> choice right?". So encapsulation of the key is <em>equal</em> across A/B/C; the real question is orchestration + separation of concerns.
+</div>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>A — A <code>GradingService</code> domain service <span class="tag">spec pre-named this</span></h3>
+      <div class="flow">handler → <b>GradingService</b>.Grade(<span>lesson</span>, answers)<br>&nbsp;&nbsp;↳ loops exercises · calls <span class="g">IsCorrect</span> · builds <span class="k">Score</span>/Outcome<br>→ new <b>Attempt</b>(learner, lesson, answers, result)</div>
+      <p class="note">The <strong>first explicit domain service</strong> in the codebase — the textbook home for logic that spans two aggregates (<code>Lesson</code> = truth, <code>Attempt</code> = record). Highest <em>new-building-block</em> learning value. Risk: a thin service can drift toward anemic if it's "just a loop."</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>B — <code>Lesson.Grade(answers) → GradingResult</code> <span class="tag">DDD-purest</span></h3>
+      <div class="flow">handler → <b>lesson</b>.Grade(answers) → <span class="k">GradingResult</span> (VO)<br>→ new <b>Attempt</b>(learner, lessonId, answers, result)</div>
+      <p class="note">Behavior lives on the aggregate that <em>owns every input</em> (exercises, keys, threshold). No anemic service; nothing to hand around. A lesson <em>is</em> a gradeable unit, so grading is arguably its core behavior. Risk: mixes "content" and "assessment" responsibilities on one root.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>C — <code>Attempt.Grade(lesson)</code></h3>
+      <div class="flow">handler → new <b>Attempt</b>(learner, lessonId, answers)<br>→ attempt.Grade(<span>lesson</span>) → sets <span class="k">Score</span>/Outcome</div>
+      <p class="note">Tell-don't-ask on the <code>Attempt</code>. But the <code>Attempt</code> must reach across into the <code>Lesson</code>'s exercises to grade itself — an aggregate reading deep into another aggregate's internals. Weakest boundary story of the three.</p>
+    </div>
+  </div>
+</div>
+
+<hr style="border:none;border-top:1px dashed rgba(255,255,255,.15);margin:14px 0">
+<p class="note"><b>My lean:</b> genuinely torn between <b>A</b> and <b>B</b>. On pure DDD merit I'd pick <b>B</b> (behavior with its data, no service smell). But your notes say the <em>learning goal</em> can be the tiebreaker — and <b>A</b> builds a <code>domain service</code>, a named building block this repo doesn't have yet (and the Slice-1 spec literally pre-named it). If you want that muscle, A is well-justified. <b>C</b> I'd set aside.</p>

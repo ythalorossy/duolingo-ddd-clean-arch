@@ -1,3 +1,4 @@
+using Learning.Domain;
 using Learning.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -27,5 +28,16 @@ public class LearningSeedTests
         Assert.Equal(2, await ctx.Units.CountAsync());
         Assert.Equal(4, await ctx.Lessons.CountAsync());
         Assert.Equal(1, await ctx.Lessons.CountAsync(l => !l.IsPublished));
+    }
+
+    [Fact]
+    public async Task Seed_gives_published_lessons_exercises_and_leaves_the_draft_empty()
+    {
+        await using var ctx = NewContext();
+        var greetings = await ctx.Lessons.FirstAsync(l => l.Id == new LessonId(LearningSeedIds.GreetingsLesson));
+        var draft = await ctx.Lessons.FirstAsync(l => l.Id == new LessonId(LearningSeedIds.DessertLessonDraft));
+
+        Assert.NotEmpty(greetings.Exercises);
+        Assert.Empty(draft.Exercises);
     }
 }

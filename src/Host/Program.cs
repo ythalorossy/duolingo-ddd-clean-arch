@@ -13,7 +13,7 @@ builder.Services.AddScoped<ICurrentUser, HeaderCurrentUser>();
 
 builder.Services.AddMediator(
     typeof(GetXpAccount).Assembly,        // Engagement.Application handlers
-    typeof(CompleteLesson).Assembly);     // Learning.Application handlers
+    typeof(SubmitAttempt).Assembly);      // Learning.Application handlers
 
 builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
 
@@ -35,13 +35,27 @@ if (builder.Configuration.GetValue("Leagues:Settlement:Enabled", true))
 var app = builder.Build();
 
 // --- Endpoints ---
-app.MapPost("/lessons/{lessonId:guid}/complete",
-    async (Guid lessonId, ICurrentUser user, IMediator mediator, CancellationToken ct) =>
+app.MapGet("/courses",
+    async (IMediator mediator, CancellationToken ct) =>
+        Results.Ok(await mediator.SendAsync(new GetCatalog(), ct)));
+
+app.MapGet("/lessons/{lessonId:guid}",
+    async (Guid lessonId, IMediator mediator, CancellationToken ct) =>
+    {
+        var dto = await mediator.SendAsync(new GetLesson(lessonId), ct);
+        return dto is null ? Results.NotFound() : Results.Ok(dto);
+    });
+
+app.MapPost("/lessons/{lessonId:guid}/attempts",
+    async (Guid lessonId, AttemptBody body, ICurrentUser user, IMediator mediator, CancellationToken ct) =>
     {
         try
         {
-            await mediator.SendAsync(new CompleteLesson(user.LearnerId, lessonId), ct);
-            return Results.Ok(); // work (incl. the XP award) runs in-process before we return
+            var result = await mediator.SendAsync(
+                new SubmitAttempt(user.LearnerId, lessonId,
+                    body.Answers.Select(a => new SubmittedAnswerInput(a.ExerciseId, a.SelectedChoiceIndex)).ToList()),
+                ct);
+            return Results.Ok(result); // grading + any XP award ran in-process before we return
         }
         catch (KeyNotFoundException ex)
         {
@@ -51,11 +65,11 @@ app.MapPost("/lessons/{lessonId:guid}/complete",
         {
             return Results.Conflict(new { error = ex.Message }); // lesson exists but is not completable
         }
+        catch (ArgumentException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message }); // answer set does not match the exercises
+        }
     });
-
-app.MapGet("/courses",
-    async (IMediator mediator, CancellationToken ct) =>
-        Results.Ok(await mediator.SendAsync(new GetCatalog(), ct)));
 
 app.MapGet("/me/xp",
     async (ICurrentUser user, IMediator mediator, CancellationToken ct) =>
@@ -110,6 +124,9 @@ app.MapPost("/me/streak-freezes",
     });
 
 app.Run();
+
+public sealed record AttemptBody(List<AnswerBody> Answers);
+public sealed record AnswerBody(Guid ExerciseId, int SelectedChoiceIndex);
 
 // Exposes the implicit Program class to WebApplicationFactory in tests.
 public partial class Program { }

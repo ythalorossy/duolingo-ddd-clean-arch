@@ -7,7 +7,7 @@ namespace Learning.Integration.Tests.Architecture;
 public class ArchitectureTests
 {
     private static readonly Assembly DomainAssembly = typeof(global::Learning.Domain.Lesson).Assembly;
-    private static readonly Assembly ApplicationAssembly = typeof(global::Learning.Application.CompleteLesson).Assembly;
+    private static readonly Assembly ApplicationAssembly = typeof(global::Learning.Application.SubmitAttempt).Assembly;
     private static readonly Assembly InfrastructureAssembly = typeof(global::Learning.Infrastructure.LearningDbContext).Assembly;
 
     [Fact]

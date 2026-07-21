@@ -12,6 +12,7 @@ public sealed class LearningDbContext(DbContextOptions<LearningDbContext> option
     public DbSet<Course> Courses => Set<Course>();
     public DbSet<Unit> Units => Set<Unit>();
     public DbSet<Lesson> Lessons => Set<Lesson>();
+    public DbSet<Attempt> Attempts => Set<Attempt>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -19,5 +20,6 @@ public sealed class LearningDbContext(DbContextOptions<LearningDbContext> option
         modelBuilder.ApplyConfiguration(new CourseConfiguration());
         modelBuilder.ApplyConfiguration(new UnitConfiguration());
         modelBuilder.ApplyConfiguration(new LessonConfiguration());
+        modelBuilder.ApplyConfiguration(new AttemptConfiguration());
     }
 }

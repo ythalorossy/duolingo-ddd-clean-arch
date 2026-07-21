@@ -4,6 +4,7 @@ using Learning.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Learning.Infrastructure.Migrations
 {
     [DbContext(typeof(LearningDbContext))]
-    partial class LearningDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260721203809_AddExercises")]
+    partial class AddExercises
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,34 +25,6 @@ namespace Learning.Infrastructure.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("Learning.Domain.Attempt", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("Id");
-
-                    b.Property<Guid>("LearnerId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("LearnerId");
-
-                    b.Property<Guid>("LessonId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasColumnName("LessonId");
-
-                    b.Property<string>("Outcome")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("Outcome");
-
-                    b.Property<DateTimeOffset>("SubmittedAt")
-                        .HasColumnType("datetimeoffset")
-                        .HasColumnName("SubmittedAt");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Attempts", "learning");
-                });
 
             modelBuilder.Entity("Learning.Domain.Course", b =>
                 {
@@ -182,68 +157,6 @@ namespace Learning.Infrastructure.Migrations
                             Position = 2,
                             Title = "Food"
                         });
-                });
-
-            modelBuilder.Entity("Learning.Domain.Attempt", b =>
-                {
-                    b.OwnsMany("Learning.Domain.Answer", "Answers", b1 =>
-                        {
-                            b1.Property<int>("Id")
-                                .ValueGeneratedOnAdd()
-                                .HasColumnType("int");
-
-                            SqlServerPropertyBuilderExtensions.UseIdentityColumn(b1.Property<int>("Id"));
-
-                            b1.Property<Guid>("AttemptId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<Guid>("ExerciseId")
-                                .HasColumnType("uniqueidentifier")
-                                .HasColumnName("ExerciseId");
-
-                            b1.Property<int>("SelectedChoiceIndex")
-                                .HasColumnType("int")
-                                .HasColumnName("SelectedChoiceIndex");
-
-                            b1.Property<bool>("WasCorrect")
-                                .HasColumnType("bit")
-                                .HasColumnName("WasCorrect");
-
-                            b1.HasKey("Id");
-
-                            b1.HasIndex("AttemptId");
-
-                            b1.ToTable("Answers", "learning");
-
-                            b1.WithOwner()
-                                .HasForeignKey("AttemptId");
-                        });
-
-                    b.OwnsOne("Learning.Domain.Score", "Score", b1 =>
-                        {
-                            b1.Property<Guid>("AttemptId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<int>("Correct")
-                                .HasColumnType("int")
-                                .HasColumnName("ScoreCorrect");
-
-                            b1.Property<int>("Total")
-                                .HasColumnType("int")
-                                .HasColumnName("ScoreTotal");
-
-                            b1.HasKey("AttemptId");
-
-                            b1.ToTable("Attempts", "learning");
-
-                            b1.WithOwner()
-                                .HasForeignKey("AttemptId");
-                        });
-
-                    b.Navigation("Answers");
-
-                    b.Navigation("Score")
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Learning.Domain.Lesson", b =>
