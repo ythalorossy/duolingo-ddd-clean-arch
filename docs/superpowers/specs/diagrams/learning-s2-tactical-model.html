@@ -1,0 +1,42 @@
+<h2>Design · Section 1 — the tactical model</h2>
+<p class="subtitle">Consolidating your six answers. Two aggregates: <code>Lesson</code> grows a child <code>Exercise</code> collection + a <code>Grade</code> behavior; <code>Attempt</code> is a new persisted root recording each graded submission.</p>
+
+<style>
+  .agg { border:2px solid var(--a,#6aa9ff); border-radius:12px; padding:12px 14px; margin:10px 0; background:rgba(106,169,255,.06); }
+  .agg .an { font-size:11px; text-transform:uppercase; letter-spacing:.08em; opacity:.7; margin-bottom:8px; }
+  .row { border:1px solid rgba(255,255,255,.22); border-radius:8px; padding:7px 10px; margin:6px 0; background:rgba(255,255,255,.04); font-size:13px; }
+  .row b { color:var(--a,#6aa9ff); } .child { margin-left:20px; border-left:2px dashed rgba(255,255,255,.2); }
+  .k { color:#ffcf5c; font-weight:600; } .m { color:#8bd450; } .vo { color:#c58bff; }
+  .mono { font-family:ui-monospace,monospace; font-size:12px; }
+  .note { font-size:12.5px; opacity:.82; margin:6px 0 0; }
+  .grid { display:flex; gap:14px; flex-wrap:wrap; } .grid > div { flex:1; min-width:260px; }
+</style>
+
+<div class="grid">
+  <div>
+    <div class="agg" style="--a:#6aa9ff">
+      <div class="an">Lesson aggregate — 1 aggregate → 2 tables</div>
+      <div class="row"><b>Lesson</b> (root)<br><span class="mono">Id · UnitId · Title · Position · IsPublished</span><br><span class="mono m">+ EnsureCompletable()</span> · <span class="mono m">+ Grade(answers) → GradingResult</span></div>
+      <div class="row child"><b>Exercise</b> (entity)<br><span class="mono">Id · Position · <span class="vo">Prompt</span> · Choices[] · <span class="k">CorrectChoice 🔒</span></span><br><span class="mono m">+ IsCorrect(choice) → bool</span></div>
+      <p class="note">Grading lives on <code>Lesson.Grade</code> (owns exercises + keys + threshold). Extract to a <code>GradingService</code> only when a cross-lesson rule appears. Key sealed behind <code>Exercise.IsCorrect</code>.</p>
+    </div>
+  </div>
+  <div>
+    <div class="agg" style="--a:#8bd450">
+      <div class="an">Attempt aggregate — NEW, persisted (first write path)</div>
+      <div class="row" style="--a:#8bd450"><b>Attempt</b> (root)<br><span class="mono">Id · LearnerId · <i>LessonId (by id)</i> · SubmittedAt</span><br><span class="mono">Answers[] · <span class="k">Score</span> · <span class="k">Outcome</span></span></div>
+      <div class="row child" style="--a:#8bd450">Answer (owned)<br><span class="mono">ExerciseId · SelectedChoice · WasCorrect</span></div>
+      <p class="note">Created already-graded from a <code>GradingResult</code>. Persisted <em>every</em> time (pass or fail) → the history Slice 3 reads. References <code>Lesson</code> by id only.</p>
+    </div>
+    <div class="agg" style="--a:#c58bff">
+      <div class="an">Value objects</div>
+      <div class="row" style="--a:#c58bff"><span class="mono"><span class="vo">Score</span> — correct/total as %, owns <b>MeetsThreshold(t)</b></span></div>
+      <div class="row" style="--a:#c58bff"><span class="mono"><span class="vo">Prompt</span> · reuse <span class="vo">Title</span> · typed ids (ExerciseId, AttemptId)</span></div>
+      <div class="row" style="--a:#c58bff"><span class="mono">GradingResult — { Score, Outcome, per-exercise correctness }</span></div>
+      <div class="row" style="--a:#c58bff"><span class="mono">Outcome — enum { Passed, Failed }</span></div>
+    </div>
+  </div>
+</div>
+
+<hr style="border:none;border-top:1px dashed rgba(255,255,255,.15);margin:12px 0">
+<p class="note"><b>One type now, polymorphism-ready:</b> <code>Exercise</code> is modelled so a second type (translate, listen-type) is an <em>additive</em> subtype overriding <code>IsCorrect</code> — no change to <code>Attempt</code>, <code>Grade</code>, or the flow. <b>Threshold</b> is a single <b>global</b> domain constant (e.g. 80%) — one place to change; <code>Lesson.Grade</code> compares the <span class="vo">Score</span> against it via <code>Score.MeetsThreshold</code>.</p>

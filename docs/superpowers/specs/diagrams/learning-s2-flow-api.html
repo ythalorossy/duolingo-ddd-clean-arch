@@ -1,0 +1,36 @@
+<h2>Design · Section 2 — data flow & API surface</h2>
+<p class="subtitle">Completion stops being <em>asserted</em> and becomes <em>earned</em>. The bare Slice-1 <code>POST /complete</code> is <strong>replaced</strong> by an attempt-submission endpoint; a new read presents the questions.</p>
+
+<style>
+  .flow { font-family:ui-monospace,monospace; font-size:12.5px; background:rgba(0,0,0,.28); border-radius:8px; padding:12px 14px; margin:10px 0; line-height:1.85; }
+  .flow .s { display:block; } .flow b{color:#6aa9ff;} .flow .w{color:#ff8f6a;} .flow .e{color:#8bd450;} .flow .k{color:#ffcf5c;} .flow .x{color:#ff6a6a;}
+  .ep { border:1px solid rgba(255,255,255,.2); border-radius:8px; padding:9px 12px; margin:7px 0; background:rgba(255,255,255,.03); font-size:13px; }
+  .ep .verb { font-family:ui-monospace,monospace; font-weight:700; }
+  .get{color:#8bd450;} .post{color:#ffcf5c;} .del{color:#ff6a6a;}
+  .note{font-size:12.5px;opacity:.84;margin:6px 0 0;}
+  .label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;opacity:.65;margin:14px 0 4px;}
+</style>
+
+<div class="label">The grading flow (POST an attempt)</div>
+<div class="flow">
+  <span class="s"><span class="post">POST</span> /lessons/{id}/attempts   { answers: [ {exerciseId, choice}, … ] }</span>
+  <span class="s">→ load <b>Lesson</b> (+ exercises)      <span class="x">unknown → 404</span></span>
+  <span class="s">→ lesson.EnsureCompletable()          <span class="x">unpublished → 409</span></span>
+  <span class="s">→ validate answers cover the exercises <span class="x">missing/unknown → 400</span></span>
+  <span class="s">→ <b>lesson</b>.Grade(answers) → <span class="k">GradingResult</span> (Score vs global threshold)</span>
+  <span class="s">→ new <b>Attempt</b>(learner, lessonId, answers, result)</span>
+  <span class="s">→ <span class="w">SaveChanges</span>   (persist attempt — pass OR fail)</span>
+  <span class="s">→ if Passed: <span class="e">publish LessonCompleted</span> → Engagement XP</span>
+  <span class="s">→ <b>200</b> { attemptId, score, outcome, perExercise: [{exerciseId, wasCorrect}] }</span>
+</div>
+
+<div class="label">Endpoints</div>
+<div class="ep"><span class="verb post">POST</span> <code>/lessons/{id}/attempts</code> — grade a submission (above). <b>Replaces</b> Slice-1 <code>POST /lessons/{id}/complete</code>. <span class="note">Pass <em>and</em> fail are both 200 (a graded result isn't an error). Repeatable: each pass awards XP again — dedup is Slice 3.</span></div>
+<div class="ep"><span class="verb get">GET</span> <code>/lessons/{id}</code> — present the lesson's exercises to answer: prompt + choices, <b>no correct answer</b>. <span class="note">New read model (the 2D map node-tap view). CQRS read port; the key never enters the DTO.</span></div>
+<div class="ep"><span class="verb get">GET</span> <code>/courses</code> — unchanged catalog read from Slice 1.</div>
+<div class="ep"><span class="verb del">removed</span> <code>POST /lessons/{id}/complete</code> + the <code>CompleteLesson</code> command — superseded by <code>SubmitAttempt</code> (which publishes <code>LessonCompleted</code> on a pass).</div>
+
+<div class="label">Persistence (learning schema grows)</div>
+<div class="ep"><code>learning.Exercises</code> — child table of the Lesson aggregate (FK LessonId, CorrectChoice column). <code>LessonRepository.GetByIdAsync</code> now <b>eager-loads</b> exercises.</div>
+<div class="ep"><code>learning.Attempts</code> (+ owned <code>Answers</code>) — new root table; new <code>IAttemptRepository.Add</code> + first <code>SaveChanges</code>.</div>
+<div class="ep">Migration <code>AddExercisesAndAttempts</code> — new tables + extend the <code>HasData</code> seed with multiple-choice exercises on the published lessons (unpublished lesson stays exercise-light to keep the 409 path).</div>

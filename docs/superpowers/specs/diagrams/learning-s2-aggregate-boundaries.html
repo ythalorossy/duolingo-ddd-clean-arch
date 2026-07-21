@@ -1,0 +1,56 @@
+<h2>Q4 — Where do exercises live?</h2>
+<p class="subtitle">Slice 2 introduces <strong>exercises</strong> (multiple-choice) and an <strong>Attempt</strong>. The key DDD call: is an <code>Exercise</code> an <em>entity inside</em> the <code>Lesson</code> aggregate, or its <em>own</em> aggregate root? The deciding lens is the same one Slice 1 used: <strong>addressability</strong> — plus a new one: <strong>where the correct answer is allowed to exist</strong> (it must never leave the server).</p>
+
+<style>
+  .agg { border: 2px solid var(--accent, #6aa9ff); border-radius: 12px; padding: 14px 16px; margin: 10px 0; background: rgba(106,169,255,0.06); }
+  .agg .aggname { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; opacity: .7; margin-bottom: 8px; }
+  .root { border: 1px solid rgba(255,255,255,.25); border-radius: 8px; padding: 8px 10px; margin: 6px 0; background: rgba(255,255,255,.04); }
+  .root b { color: var(--accent, #6aa9ff); }
+  .child { margin-left: 22px; border-left: 2px dashed rgba(255,255,255,.2); }
+  .key { color: #ffcf5c; font-weight: 600; }
+  .sep { border: none; border-top: 1px dashed rgba(255,255,255,.15); margin: 14px 0; }
+  .note { font-size: 13px; opacity: .8; margin-top: 8px; }
+  .tag { display:inline-block; font-size:11px; padding:1px 7px; border-radius:10px; background:rgba(255,255,255,.1); margin-left:6px; }
+</style>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>A — Exercises live <em>inside</em> the Lesson aggregate <span class="tag">recommended</span></h3>
+      <p class="note"><code>Lesson</code> becomes a real aggregate root that <b>owns</b> a collection of <code>Exercise</code> entities. The <span class="key">correct answer 🔒</span> lives on the Exercise, <em>inside</em> the Lesson boundary — it never crosses into a DTO. <code>Attempt</code> is its own root, referencing the lesson <b>by id</b>.</p>
+
+      <div class="agg" style="--accent:#6aa9ff">
+        <div class="aggname">Lesson aggregate (1 aggregate → 2 tables)</div>
+        <div class="root"><b>Lesson</b> (root) · Id · UnitId · Title · IsPublished · PassThreshold</div>
+        <div class="root child">Exercise (entity) · prompt · choices · <span class="key">correctChoice 🔒</span></div>
+        <div class="root child">Exercise (entity) · prompt · choices · <span class="key">correctChoice 🔒</span></div>
+      </div>
+
+      <div class="agg" style="--accent:#8bd450">
+        <div class="aggname">Attempt aggregate</div>
+        <div class="root"><b>Attempt</b> (root) · Id · LearnerId · <i>LessonId (by id)</i> · answers[] · Score · Outcome</div>
+      </div>
+
+      <p class="note">✅ Mirrors Engagement's <code>XpAccount</code> + owned <code>AppliedAwards</code> — the codebase's proven "1 aggregate / 2 tables" shape (Slice 1 never had children). Grading loads <em>one</em> Lesson with its exercises, grades in one boundary. The answer key has a natural home that a read model simply can't reach.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>B — Exercise is its own aggregate root (by id)</h3>
+      <p class="note">Consistent with Slice 1's "small roots referenced by id" (Course/Unit/Lesson). Grading loads the lesson's exercises via a query <code>WHERE LessonId = …</code>.</p>
+
+      <div class="agg" style="--accent:#c58bff">
+        <div class="aggname">Three independent roots</div>
+        <div class="root"><b>Lesson</b> (root) · Id · UnitId · Title · IsPublished</div>
+        <div class="root"><b>Exercise</b> (root) · Id · <i>LessonId (by id)</i> · prompt · choices · <span class="key">correctChoice 🔒</span></div>
+        <div class="root"><b>Attempt</b> (root) · Id · LearnerId · <i>LessonId</i> · answers[] · Score · Outcome</div>
+      </div>
+
+      <p class="note">⚠️ Exercises aren't addressed from outside by a global id — nobody does <code>GET /exercises/{id}</code>; they're always reached <em>through their lesson</em>. That's the tell of a <b>child entity</b>, not a root. Making it a root also scatters the answer key across a standalone table and invites "load exercises separately" races the aggregate would prevent.</p>
+    </div>
+  </div>
+</div>
+
+<hr class="sep">
+<p class="note"><strong>Either way:</strong> <code>Attempt</code> is its own aggregate root (it has its own lifecycle and global id), and the <span class="key">correct answer never appears in any read model</span> — the "present the exercise" DTO (Slice 2 also needs a <code>GET</code> to show prompts + choices) omits it. Grading is <strong>server-authoritative</strong>.</p>

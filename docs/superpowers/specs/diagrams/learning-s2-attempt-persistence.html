@@ -1,0 +1,53 @@
+<h2>Q6 — Does the <code>Attempt</code> get persisted?</h2>
+<p class="subtitle">This is the scope hinge of Slice 2. In Slice 1, Learning was <strong>read-only at runtime</strong> (load a lesson, publish an event, write nothing). An <code>Attempt</code> that <em>persists</em> gives Learning its <strong>first write path</strong> — new table, repository, migration, <code>SaveChanges</code>. The alternative keeps grading transient and Learning read-only.</p>
+
+<style>
+  .flow { font-family:ui-monospace,monospace; font-size:12.5px; background:rgba(0,0,0,.28); border-radius:8px; padding:12px 14px; margin:10px 0; line-height:1.9; }
+  .flow .step { display:block; }
+  .flow b { color:#6aa9ff; } .flow .w { color:#ff8f6a; } .flow .e { color:#8bd450; } .flow .k { color:#ffcf5c; }
+  .note { font-size:13px; opacity:.84; }
+  .tag { display:inline-block; font-size:11px; padding:1px 7px; border-radius:10px; background:rgba(255,255,255,.1); margin-left:6px; }
+  .pc { display:flex; gap:14px; flex-wrap:wrap; margin-top:6px; }
+  .pc > div { flex:1; min-width:220px; font-size:12.5px; }
+  .pc h4 { margin:4px 0; font-size:12px; text-transform:uppercase; letter-spacing:.06em; opacity:.7; }
+</style>
+
+<div class="cards">
+  <div class="card" data-choice="persist" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>B2 — Persist the <code>Attempt</code> (real write path) <span class="tag">recommended</span></h3>
+      <div class="flow">
+        <span class="step">POST /lessons/{id}/attempts  { answers[] }</span>
+        <span class="step">→ load <b>Lesson</b> (+ exercises)</span>
+        <span class="step">→ <b>lesson</b>.Grade(answers) → <span class="k">GradingResult</span></span>
+        <span class="step">→ new <b>Attempt</b>(learner, lessonId, answers, result)</span>
+        <span class="step">→ <span class="w">SaveChanges</span>  ← persists EVERY attempt (pass or fail)</span>
+        <span class="step">→ if Outcome == Passed: <span class="e">publish LessonCompleted</span> → XP</span>
+        <span class="step">→ 200 { score, outcome, per-exercise correctness }</span>
+      </div>
+      <div class="pc">
+        <div><h4>Why</h4>A never-persisted "aggregate" is a contradiction — aggregates <em>are</em> consistency/persistence boundaries. This is the honest first write path, and the durable <code>Attempt</code> history is <strong>exactly</strong> what Slice 3 (once-per-lesson credit, reduced XP on repeat) reads.</div>
+        <div><h4>Cost</h4>One <code>learning.Attempts</code> table + <code>AttemptRepository</code> + migration + first <code>SaveChanges</code>. Modest — a skeleton growing its spine, not gold-plating.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="transient" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>B1 — Transient grading (Learning stays read-only)</h3>
+      <div class="flow">
+        <span class="step">POST /lessons/{id}/attempts  { answers[] }</span>
+        <span class="step">→ load <b>Lesson</b> · <b>lesson</b>.Grade(answers) → <span class="k">GradingResult</span></span>
+        <span class="step">→ if Passed: <span class="e">publish LessonCompleted</span> → XP   (nothing written)</span>
+        <span class="step">→ 200 { score, outcome, correctness }</span>
+      </div>
+      <div class="pc">
+        <div><h4>Why</h4>Maximally restrained — preserves Slice 1's clean read-only property; no table/migration. Defers <em>all</em> attempt storage to Slice 3.</div>
+        <div><h4>Cost</h4>The "Attempt aggregate" from Q4 becomes just a <code>GradingResult</code> value object — we walk back the aggregate. Slice 3 then has to build the write path <em>and</em> backfill history it never captured. Repeats/pass-rate are unobservable until then.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr style="border:none;border-top:1px dashed rgba(255,255,255,.15);margin:14px 0">
+<p class="note"><b>Event timing (both options):</b> <span class="e">publish only on a pass</span>, and in B2 <em>after</em> <code>SaveChanges</code> — the persisted <code>Attempt</code> is the source of truth; the in-process XP award stays best-effort (same no-outbox posture as Slice 1; a future outbox could re-publish from the saved row). <b>No Learning domain-event dispatcher</b> — <code>LessonCompleted</code> is an <em>integration</em> event the handler publishes directly, exactly as today. Still <b>repeatable</b>: each passing attempt awards XP again; true "once per lesson" is Slice 3.</p>
