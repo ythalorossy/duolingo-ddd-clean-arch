@@ -41,4 +41,16 @@ public class LessonRepositoryTests
 
         Assert.Null(lesson);
     }
+
+    [Fact]
+    public async Task GetByIdAsync_loads_the_seeded_exercises()
+    {
+        await using var ctx = NewContext();
+        var lesson = await new LessonRepository(ctx)
+            .GetByIdAsync(new LessonId(LearningSeedIds.GreetingsLesson), CancellationToken.None);
+
+        Assert.NotNull(lesson);
+        Assert.NotEmpty(lesson!.Exercises);
+        Assert.All(lesson.Exercises, e => Assert.True(e.Choices.Count >= 2));
+    }
 }
