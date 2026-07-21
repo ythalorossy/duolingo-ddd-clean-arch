@@ -146,4 +146,20 @@ public class AggregatesTests
         // choice index outside the exercise's options
         Assert.Throws<ArgumentException>(() => lesson.Grade(new[] { Answer(lesson, 0, 5), Answer(lesson, 1, 0) }));
     }
+
+    [Fact]
+    public void Grade_throws_when_the_lesson_has_no_exercises()
+    {
+        var lesson = PublishedLessonWith();
+        Assert.Throws<InvalidOperationException>(() => lesson.Grade(Array.Empty<SubmittedAnswer>()));
+    }
+
+    [Fact]
+    public void Grade_rejects_an_answer_set_with_a_duplicate_exercise_id()
+    {
+        var lesson = PublishedLessonWith((0, new[] { "a", "b" }), (1, new[] { "a", "b" }));
+
+        // count matches (2) but both answers reference the same exercise, so ids are not distinct
+        Assert.Throws<ArgumentException>(() => lesson.Grade(new[] { Answer(lesson, 0, 0), Answer(lesson, 0, 0) }));
+    }
 }
