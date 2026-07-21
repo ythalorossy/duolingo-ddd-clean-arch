@@ -15,6 +15,7 @@ public static class LearningInfrastructureExtensions
         services.AddScoped<ILessonRepository, LessonRepository>();
         services.AddScoped<ICatalogReadService, CatalogReadService>();
         services.AddScoped<IAttemptRepository, AttemptRepository>();
+        services.AddScoped<ILessonPresentationRead, LessonPresentationRead>();
 
         // TimeProvider is shared with Engagement; TryAdd avoids a duplicate registration when both modules load.
         services.TryAddSingleton(TimeProvider.System);
