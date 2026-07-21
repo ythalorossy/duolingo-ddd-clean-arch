@@ -31,11 +31,13 @@ public sealed class SubmitAttemptHandler(
 
         var result = lesson.Grade(submitted); // malformed set -> ArgumentException -> 400
 
+        var now = clock.GetUtcNow();
+
         var attempt = Attempt.Create(
             new AttemptId(Guid.NewGuid()),
             new LearnerId(request.LearnerId),
             lesson.Id,
-            clock.GetUtcNow(),
+            now,
             result);
 
         await attempts.AddAsync(attempt, ct); // persist first — the Attempt is the source of truth
@@ -48,7 +50,7 @@ public sealed class SubmitAttemptHandler(
                     EventId: Guid.NewGuid(),
                     LearnerId: request.LearnerId,
                     LessonId: request.LessonId,
-                    OccurredOn: clock.GetUtcNow()),
+                    OccurredOn: now),
                 ct);
         }
 

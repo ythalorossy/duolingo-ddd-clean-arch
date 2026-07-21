@@ -180,5 +180,7 @@ public class AggregatesTests
         Assert.False(attempt.Passed);
         Assert.Equal(2, attempt.Answers.Count);
         Assert.Equal(result.Answers.Select(a => a.WasCorrect), attempt.Answers.Select(a => a.WasCorrect));
+        Assert.Equal(result.Answers.Select(a => a.ExerciseId), attempt.Answers.Select(a => a.ExerciseId));
+        Assert.Equal(result.Answers.Select(a => a.SelectedChoiceIndex), attempt.Answers.Select(a => a.SelectedChoiceIndex));
     }
 }

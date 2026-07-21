@@ -44,11 +44,32 @@ public class ValueObjectsTests
     }
 
     [Fact]
+    public void Exercise_attempt_learner_ids_have_value_equality()
+    {
+        var g = Guid.NewGuid();
+        Assert.Equal(new ExerciseId(g), new ExerciseId(g));
+        Assert.NotEqual(new ExerciseId(g), new ExerciseId(Guid.NewGuid()));
+
+        Assert.Equal(new AttemptId(g), new AttemptId(g));
+        Assert.NotEqual(new AttemptId(g), new AttemptId(Guid.NewGuid()));
+
+        Assert.Equal(new LearnerId(g), new LearnerId(g));
+        Assert.NotEqual(new LearnerId(g), new LearnerId(Guid.NewGuid()));
+    }
+
+    [Fact]
     public void Prompt_trims_and_rejects_empty()
     {
         Assert.Equal("Pick the greeting", new Prompt("  Pick the greeting  ").Value);
         Assert.Throws<ArgumentException>(() => new Prompt("   "));
         Assert.Throws<ArgumentException>(() => new Prompt(new string('x', Prompt.MaxLength + 1)));
+    }
+
+    [Fact]
+    public void Prompt_has_value_equality()
+    {
+        Assert.Equal(new Prompt("Pick the greeting"), new Prompt("Pick the greeting"));
+        Assert.NotEqual(new Prompt("Pick the greeting"), new Prompt("Pick the farewell"));
     }
 
     [Fact]
@@ -66,6 +87,13 @@ public class ValueObjectsTests
     {
         Assert.Equal(new Choices(new[] { "a", "b" }), new Choices(new[] { "a", "b" }));
         Assert.NotEqual(new Choices(new[] { "a", "b" }), new Choices(new[] { "b", "a" }));
+    }
+
+    [Fact]
+    public void Score_has_value_equality()
+    {
+        Assert.Equal(new Score(1, 2), new Score(1, 2));
+        Assert.NotEqual(new Score(1, 2), new Score(1, 3));
     }
 
     [Fact]

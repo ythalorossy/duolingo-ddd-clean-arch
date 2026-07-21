@@ -42,6 +42,7 @@ public sealed class Attempt : AggregateRoot
         ArgumentNullException.ThrowIfNull(learnerId);
         ArgumentNullException.ThrowIfNull(lessonId);
         ArgumentNullException.ThrowIfNull(result);
+        ArgumentNullException.ThrowIfNull(result.Answers);
 
         var attempt = new Attempt
         {
