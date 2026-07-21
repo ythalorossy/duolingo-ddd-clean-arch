@@ -162,7 +162,18 @@ implementation**. Each sub-project gets its own branch (`feat/<name>`) and PR.
   deferred to Slice 3). New `GET /courses` read model; own `DuolingoLearning` database + `learning` schema,
   seeded via EF `HasData` (one lesson left unpublished). NetArchTest locks the boundaries (Domain pure; no
   `Learning → Engagement` refs).
-- ⏭️ **Next:** **Learning Slice 2** (exercise engine + grading — completion becomes *earned* via a passing
-  attempt) → **Slice 3** (per-learner progress / mastery / unlocking, plus the completion economy:
-  once-per-lesson credit, reduced XP on repeat) → real Identity (and a real freeze economy when Billing
-  exists); a subscriber for the `Promoted`/`Demoted` events.
+- ✅ **Sub-project 5 — Learning, Slice 2 (exercises + grading / earned completion)** (PR #8): multiple-choice
+  **`Exercise`** as a child entity *inside* the `Lesson` aggregate (the first 1-aggregate/2-table content
+  root, mirroring `XpAccount`/`AppliedAwards`); the correct answer is sealed behind `Exercise.IsCorrect(...)`.
+  **`Lesson.Grade(answers) → GradingResult`** scores a `Score` value object against a global
+  `PassThreshold = 0.8` (inclusive). New **persisted `Attempt`** aggregate + owned `Answer` — Learning's first
+  write path (`IAttemptRepository`). **`POST /lessons/{id}/attempts`** grades, persists every attempt, and
+  publishes the unchanged `LessonCompleted` **only on a pass** (persist-before-publish) — **200 pass/fail /
+  404 / 409 / 400**, still repeatable; new **`GET /lessons/{id}`** presents exercises **without the answer
+  key** (server-authoritative). Two migrations (`AddExercises`, `AddAttempts`); the old asserted
+  `POST /complete` + `CompleteLesson` were removed. Grading deliberately kept on `Lesson.Grade` (extract to a
+  `GradingService` only when a rule spans beyond one lesson's data).
+- ⏭️ **Next:** **Learning Slice 3** (per-learner progress / mastery / unlocking — the 2D-map node
+  reachability — plus the completion economy: once-per-lesson credit, reduced XP on repeat, dedup) → real
+  Identity (and a real freeze economy when Billing exists); a subscriber for the `Promoted`/`Demoted` events.
+  Small deferred follow-ups: bound the `Outcome` column on the next migration; draft-lesson visibility.

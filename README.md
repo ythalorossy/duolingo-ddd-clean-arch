@@ -113,7 +113,7 @@ Every sub-project is captured as a **spec** (the *why*, with rejected alternativ
 **plan** (its TDD task breakdown).
 
 - **Design foundations** (strategic DDD, architecture, build order): [`docs/superpowers/specs/2026-05-28-architecture-foundations-design.md`](docs/superpowers/specs/2026-05-28-architecture-foundations-design.md)
-- **All specs:** [`docs/superpowers/specs`](docs/superpowers/specs) · **all plans:** [`docs/superpowers/plans`](docs/superpowers/plans) — XP skeleton, streaks, streak freeze, and leagues (slices 1 & 2)
+- **All specs:** [`docs/superpowers/specs`](docs/superpowers/specs) · **all plans:** [`docs/superpowers/plans`](docs/superpowers/plans) — XP skeleton, streaks, streak freeze, leagues (slices 1–3), and Learning (slices 1 & 2)
 - **How the mediator works:** [`docs/design/building-blocks/mediator.md`](docs/design/building-blocks/mediator.md)
 
 ## Status & roadmap
@@ -123,9 +123,15 @@ Every sub-project is captured as a **spec** (the *why*, with rejected alternativ
   aggregate reacting to `LessonCompleted`.
 - ✅ **Sub-project 3 — Streak freeze:** auto-applied, lazily-settled, capped freeze — one shared
   rule across the write path and the read projection, no nightly job.
-- ✅ **Sub-project 4 — Leagues:** weekly XP accumulation + leaderboard (Slice 1) and cohort
-  promotion/demotion at week close (Slice 2), fed by an in-process domain-event dispatcher.
-- ⏭️ **Next:** the automatic settlement trigger → real Learning engine → real Identity.
+- ✅ **Sub-project 4 — Leagues:** weekly XP accumulation + leaderboard (Slice 1), cohort
+  promotion/demotion at week close (Slice 2), and a feature-flagged background scheduler that settles
+  ended weeks automatically (Slice 3) — fed by an in-process domain-event dispatcher.
+- ✅ **Sub-project 5 — Learning:** a real content catalog (Course → Unit → Lesson) with validated
+  completion (Slice 1), then **earned completion** (Slice 2) — multiple-choice exercises inside the
+  `Lesson` aggregate, `Lesson.Grade` scoring against a pass threshold, a persisted `Attempt`, and
+  `POST /lessons/{id}/attempts` publishing `LessonCompleted` only on a pass (server-authoritative grading).
+- ⏭️ **Next:** Learning Slice 3 (per-learner progress / mastery / unlocking + completion economy) → real
+  Identity; a subscriber for the `Promoted`/`Demoted` events.
 
-114 tests green. Each step follows its own **brainstorm → spec → plan → TDD** cycle on a dedicated
+172 tests green. Each step follows its own **brainstorm → spec → plan → TDD** cycle on a dedicated
 branch.
