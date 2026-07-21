@@ -13,7 +13,7 @@ builder.Services.AddScoped<ICurrentUser, HeaderCurrentUser>();
 
 builder.Services.AddMediator(
     typeof(GetXpAccount).Assembly,        // Engagement.Application handlers
-    typeof(CompleteLesson).Assembly);     // Learning.Application handlers
+    typeof(SubmitAttempt).Assembly);      // Learning.Application handlers
 
 builder.Services.AddScoped(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
 
@@ -35,24 +35,6 @@ if (builder.Configuration.GetValue("Leagues:Settlement:Enabled", true))
 var app = builder.Build();
 
 // --- Endpoints ---
-app.MapPost("/lessons/{lessonId:guid}/complete",
-    async (Guid lessonId, ICurrentUser user, IMediator mediator, CancellationToken ct) =>
-    {
-        try
-        {
-            await mediator.SendAsync(new CompleteLesson(user.LearnerId, lessonId), ct);
-            return Results.Ok(); // work (incl. the XP award) runs in-process before we return
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return Results.NotFound(new { error = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Results.Conflict(new { error = ex.Message }); // lesson exists but is not completable
-        }
-    });
-
 app.MapGet("/courses",
     async (IMediator mediator, CancellationToken ct) =>
         Results.Ok(await mediator.SendAsync(new GetCatalog(), ct)));
