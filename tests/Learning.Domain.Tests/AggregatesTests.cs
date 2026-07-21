@@ -162,4 +162,23 @@ public class AggregatesTests
         // count matches (2) but both answers reference the same exercise, so ids are not distinct
         Assert.Throws<ArgumentException>(() => lesson.Grade(new[] { Answer(lesson, 0, 0), Answer(lesson, 0, 0) }));
     }
+
+    [Fact]
+    public void Attempt_Create_records_the_grading_result()
+    {
+        var lesson = PublishedLessonWith((0, new[] { "a", "b" }), (1, new[] { "a", "b" }));
+        var result = lesson.Grade(new[] { Answer(lesson, 0, 0), Answer(lesson, 1, 0) }); // 1/2 -> Failed
+
+        var learnerId = new LearnerId(Guid.NewGuid());
+        var at = new DateTimeOffset(2030, 1, 1, 12, 0, 0, TimeSpan.Zero);
+        var attempt = Attempt.Create(new AttemptId(Guid.NewGuid()), learnerId, lesson.Id, at, result);
+
+        Assert.Equal(learnerId, attempt.LearnerId);
+        Assert.Equal(lesson.Id, attempt.LessonId);
+        Assert.Equal(at, attempt.SubmittedAt);
+        Assert.Equal(Outcome.Failed, attempt.Outcome);
+        Assert.False(attempt.Passed);
+        Assert.Equal(2, attempt.Answers.Count);
+        Assert.Equal(result.Answers.Select(a => a.WasCorrect), attempt.Answers.Select(a => a.WasCorrect));
+    }
 }
