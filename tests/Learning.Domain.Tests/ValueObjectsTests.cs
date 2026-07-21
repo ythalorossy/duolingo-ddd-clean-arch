@@ -34,4 +34,37 @@ public class ValueObjectsTests
         Assert.Equal("Greetings", new Title("  Greetings  ").Value);
         Assert.Throws<ArgumentException>(() => new Title(new string('x', Title.MaxLength + 1)));
     }
+
+    [Fact]
+    public void Exercise_attempt_learner_ids_reject_empty_guid()
+    {
+        Assert.Throws<ArgumentException>(() => new ExerciseId(Guid.Empty));
+        Assert.Throws<ArgumentException>(() => new AttemptId(Guid.Empty));
+        Assert.Throws<ArgumentException>(() => new LearnerId(Guid.Empty));
+    }
+
+    [Fact]
+    public void Prompt_trims_and_rejects_empty()
+    {
+        Assert.Equal("Pick the greeting", new Prompt("  Pick the greeting  ").Value);
+        Assert.Throws<ArgumentException>(() => new Prompt("   "));
+        Assert.Throws<ArgumentException>(() => new Prompt(new string('x', Prompt.MaxLength + 1)));
+    }
+
+    [Fact]
+    public void Choices_requires_at_least_two_non_empty_options_and_indexes()
+    {
+        var choices = new Choices(new[] { "Hola", "Adios" });
+        Assert.Equal(2, choices.Count);
+        Assert.Equal("Hola", choices[0]);
+        Assert.Throws<ArgumentException>(() => new Choices(new[] { "only one" }));
+        Assert.Throws<ArgumentException>(() => new Choices(new[] { "ok", "  " }));
+    }
+
+    [Fact]
+    public void Choices_has_value_equality()
+    {
+        Assert.Equal(new Choices(new[] { "a", "b" }), new Choices(new[] { "a", "b" }));
+        Assert.NotEqual(new Choices(new[] { "a", "b" }), new Choices(new[] { "b", "a" }));
+    }
 }
