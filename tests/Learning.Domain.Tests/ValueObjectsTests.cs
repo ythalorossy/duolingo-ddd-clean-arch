@@ -67,4 +67,22 @@ public class ValueObjectsTests
         Assert.Equal(new Choices(new[] { "a", "b" }), new Choices(new[] { "a", "b" }));
         Assert.NotEqual(new Choices(new[] { "a", "b" }), new Choices(new[] { "b", "a" }));
     }
+
+    [Fact]
+    public void Score_computes_percentage_and_rejects_invalid()
+    {
+        Assert.Equal(0.5, new Score(1, 2).Percentage, 5);
+        Assert.Throws<ArgumentException>(() => new Score(3, 2));   // correct > total
+        Assert.Throws<ArgumentException>(() => new Score(-1, 2));  // negative
+        Assert.Throws<ArgumentException>(() => new Score(0, 0));   // total < 1
+    }
+
+    [Theory]
+    [InlineData(4, 5, 0.8, true)]   // exactly at threshold passes
+    [InlineData(3, 5, 0.8, false)]  // below fails
+    [InlineData(5, 5, 0.8, true)]   // perfect passes
+    public void Score_MeetsThreshold_is_inclusive_at_the_boundary(int correct, int total, double threshold, bool expected)
+    {
+        Assert.Equal(expected, new Score(correct, total).MeetsThreshold(threshold));
+    }
 }
