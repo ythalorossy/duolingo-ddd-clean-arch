@@ -10,6 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 // --- Composition root ---
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HeaderCurrentUser>();
+builder.Services.AddOpenApi();
 
 builder.Services.AddMediator(
     typeof(GetXpAccount).Assembly,        // Engagement.Application handlers
@@ -34,10 +35,13 @@ if (builder.Configuration.GetValue("Leagues:Settlement:Enabled", true))
 
 var app = builder.Build();
 
+app.MapOpenApi(); // serves /openapi/v1.json
+
 // --- Endpoints ---
 app.MapGet("/courses",
     async (IMediator mediator, CancellationToken ct) =>
-        Results.Ok(await mediator.SendAsync(new GetCatalog(), ct)));
+        Results.Ok(await mediator.SendAsync(new GetCatalog(), ct)))
+    .Produces<CatalogDto>();
 
 app.MapGet("/lessons/{lessonId:guid}",
     async (Guid lessonId, IMediator mediator, CancellationToken ct) =>
