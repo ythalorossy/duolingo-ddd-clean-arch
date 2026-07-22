@@ -19,3 +19,8 @@
 # Local config & secrets
 appsettings.*.local.json
 *.env
+
+# Angular / Node (web workspace)
+web/node_modules/
+web/.angular/
+web/dist/
