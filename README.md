@@ -64,10 +64,12 @@ src/
   Host/                              composition root + Minimal API
   BuildingBlocks/{Domain,Mediator,Contracts}
   Modules/Engagement/{Engagement.Domain, .Application, .Infrastructure}
-  Modules/Learning/Learning.Stub
+  Modules/Learning/{Learning.Domain, .Application, .Infrastructure}
 tests/
   Engagement.Domain.Tests            pure domain unit tests
   Engagement.Integration.Tests       mediator · application · persistence · e2e · architecture
+  Learning.Domain.Tests              pure domain unit tests
+  Learning.Integration.Tests         handler · persistence · grading · e2e · architecture
 docs/
   superpowers/specs/                 design specs + archived diagrams
   superpowers/plans/                 implementation plans
@@ -87,7 +89,7 @@ docs/
 
 ```powershell
 dotnet build
-dotnet test          # 114 tests: 60 domain unit + 54 integration (incl. end-to-end on LocalDB)
+dotnet test          # 172 tests: 90 domain unit + 82 integration (incl. end-to-end on LocalDB)
 ```
 
 The integration tests create and migrate their own databases automatically, then clean up.
@@ -96,7 +98,9 @@ The integration tests create and migrate their own databases automatically, then
 
 | Method | Route | Purpose |
 |---|---|---|
-| `POST` | `/lessons/{lessonId}/complete` | Complete a (stubbed) lesson → awards XP, advances the streak, accrues league XP |
+| `GET`  | `/courses` | The seeded catalog, nested Course → Unit → Lesson |
+| `GET`  | `/lessons/{lessonId}` | A lesson's exercises to answer (prompt + choices, **no** answer key) |
+| `POST` | `/lessons/{lessonId}/attempts` | Grade a submission → on a pass, awards XP, advances the streak, accrues league XP |
 | `GET`  | `/me/xp` | The learner's total XP |
 | `GET`  | `/me/streak` | Current & longest streak, status, freezes available |
 | `PUT`  | `/me/timezone` | Set the learner's IANA time zone (drives streak day boundaries) |

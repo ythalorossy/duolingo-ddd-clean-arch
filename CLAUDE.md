@@ -31,7 +31,7 @@ extracted into a service later. Modules: **Identity** (generic), **Learning** (s
    `Presentation → Infrastructure → Application → Domain`. The **Domain references nothing**
    infrastructural (no EF Core, no ASP.NET). This is enforced structurally (the `*.Domain`
    project simply doesn't reference those packages) and by tests in
-   `tests/Engagement.Integration.Tests/Architecture/`.
+   `tests/Engagement.Integration.Tests/Architecture/` and `tests/Learning.Integration.Tests/Architecture/`.
 3. **No cross-schema JOINs.** Each module owns one SQL schema (e.g. `engagement`). Crossing a
    boundary means an event or a contract, never a JOIN.
 4. **The core gets the richest model.** Engagement is where expressive aggregates live.
@@ -40,9 +40,12 @@ extracted into a service later. Modules: **Identity** (generic), **Learning** (s
 ### Tactical patterns in use
 
 - **Aggregates** are the only mutators of their own state (no public setters); invariants live
-  inside them. Example: `LearnerEngagement.AwardXp(...)`.
+  inside them. Examples: `XpAccount.AwardXp(...)`, `Lesson.Grade(...)`. Aggregates may own child
+  entities (e.g. `Lesson` owns its `Exercise`s) — reached only through the root, mapped as an EF
+  owned collection.
 - **Value objects** (inherit `BuildingBlocks.Domain.ValueObject`) encode invariants and kill
-  primitive obsession: `LearnerId`, `Xp`, `XpAward`.
+  primitive obsession: `LearnerId`, `Xp`, `XpAward` (Engagement); `Score`, `Choices`, `Prompt`,
+  typed ids (Learning).
 - **Domain events** (`IDomainEvent`) are raised by aggregates; **integration events**
   (`INotification` in `Contracts`) cross module boundaries via the mediator.
 - **CQRS-lite:** every use case is an `IRequest`/`IRequestHandler` (commands/queries) or an
@@ -61,7 +64,7 @@ src/
   Host/                              ASP.NET Core composition root + Minimal API endpoints
   BuildingBlocks/{Domain,Mediator,Contracts}
   Modules/Engagement/{Engagement.Domain, .Application, .Infrastructure}
-  Modules/Learning/{Learning.Domain, .Application, .Infrastructure}   content catalog + real completion
+  Modules/Learning/{Learning.Domain, .Application, .Infrastructure}   catalog + exercises/grading/attempts
 tests/
   Engagement.Domain.Tests            fast pure-domain unit tests
   Engagement.Integration.Tests       mediator, application, persistence, e2e, architecture
@@ -82,26 +85,31 @@ dotnet test tests/Engagement.Domain.Tests      # fast domain tests only
 dotnet test tests/<Project> --filter "FullyQualifiedName~<ClassName>"  # one test class (TDD loop)
 dotnet run --project src/Host                  # run the API (see "Database" note)
 
-# EF migrations (uses the design-time factory → DuolingoEngagement_Design DB)
+# EF migrations — each module has its own design-time factory + Design reference.
+# Engagement → DuolingoEngagement_Design; Learning → DuolingoLearning_Design.
 dotnet ef migrations add <Name> `
   -p src/Modules/Engagement/Engagement.Infrastructure `
   -s src/Modules/Engagement/Engagement.Infrastructure -o Migrations
+# (swap Engagement → Learning for the Learning module's migrations)
 ```
 
 ## Database
 
 - **LocalDB is on-demand** — no service to start; the first connection spins it up.
 - **Tests self-manage their databases** (`EnsureDeleted` + `Migrate`) using isolated names:
-  `DuolingoEngagement_Test`, `DuolingoEngagement_E2E`, `DuolingoEngagement_Design`.
+  `DuolingoEngagement_Test`, `DuolingoEngagement_E2E`, `DuolingoEngagement_Design`, and the Learning
+  equivalents `DuolingoLearning_E2E` / `DuolingoLearning_Design` plus per-class names
+  (`DuolingoLearning_Lesson_Test`, `_Attempt_Test`, `_Present_Test`, `_Catalog_Test`, `_Seed_Test`).
 - **One unique DB name per persistence/e2e test class** — xUnit runs classes in parallel, so a
   shared name races `EnsureDeleted`.
 - **`FakeTimeProvider` is forward-only** (`SetUtcNow` throws going backward). E2E classes sharing a
   factory share its clock, so a test needing a different time window needs its own factory.
 - The running Host uses `DuolingoEngagement` and `DuolingoLearning` (see `appsettings.json`).
-- **Known gap / TODO:** the Host does **not** auto-apply migrations on startup yet, and only
-  `Engagement.Infrastructure` references `Microsoft.EntityFrameworkCore.Design`. To run the
-  app against a populated dev DB today you must apply the schema manually. A startup
-  migration step (or adding Design to Host) is a reasonable future ergonomic improvement.
+- **Known gap / TODO:** the Host does **not** auto-apply migrations on startup yet (each module's
+  `*.Infrastructure` project references `Microsoft.EntityFrameworkCore.Design` and has its own
+  design-time factory, so migrations are generated per-module). To run the app against a populated
+  dev DB today you must apply each schema manually. A startup migration step is a reasonable future
+  ergonomic improvement.
 
 ## How we work (process)
 
@@ -147,7 +155,7 @@ implementation**. Each sub-project gets its own branch (`feat/<name>`) and PR.
   per-week `LeagueWeekSettlement` idempotency marker; subscriber-less `Promoted`/`Demoted` events;
   `POST /leagues/weeks/{weekStart}/settle`. The automatic trigger (scheduler / lazy-on-activity)
   is deferred — the command is the seam.
-- ✅ **Sub-project 4 — Leagues, Slice 3 (automatic trigger)** (branch `feat/leagues-auto-settlement`):
+- ✅ **Sub-project 4 — Leagues, Slice 3 (automatic trigger)** (PR #6):
   a feature-flagged `BackgroundService` (`LeagueSettlementScheduler`, the repo's first) periodically
   settles every ended-but-unsettled week via a new `SettleDueLeagueWeeks` policy command, which sends
   the unchanged `SettleLeagueWeek` once per due week (oldest-first → the chain holds; idempotent via
