@@ -20,6 +20,10 @@ public class LearningApiTests(LearningApiFactory factory) : IClassFixture<Learni
     private sealed record AnswerInput(Guid ExerciseId, int SelectedChoiceIndex);
     private sealed record AttemptRequest(List<AnswerInput> Answers);
 
+    private sealed record CourseMapView(Guid CourseId, string Title, List<UnitMapView> Units);
+    private sealed record UnitMapView(Guid Id, string Title, int Position, List<LessonNodeView> Lessons);
+    private sealed record LessonNodeView(Guid Id, string Title, int Position, string Status);
+
     private HttpClient ClientForLearner(Guid learnerId)
     {
         var client = factory.CreateClient();
@@ -131,5 +135,44 @@ public class LearningApiTests(LearningApiFactory factory) : IClassFixture<Learni
 
         var xp = await client.GetFromJsonAsync<XpResponse>("/me/xp");
         Assert.Equal(20, xp!.TotalXp);
+    }
+
+    [Fact]
+    public async Task Course_map_for_a_new_learner_unlocks_only_the_first_lesson()
+    {
+        var client = ClientForLearner(Guid.NewGuid());
+
+        var map = await client.GetFromJsonAsync<CourseMapView>($"/me/courses/{LearningSeedIds.SpanishCourse}/map");
+
+        Assert.NotNull(map);
+        Assert.Equal("Unlocked", map!.Units[0].Lessons[0].Status); // Greetings
+        Assert.Equal("Locked", map.Units[0].Lessons[1].Status);    // The verb ser
+        Assert.DoesNotContain(
+            map.Units.SelectMany(u => u.Lessons),
+            l => l.Id == LearningSeedIds.DessertLessonDraft);       // draft absent
+    }
+
+    [Fact]
+    public async Task Passing_a_lesson_advances_the_map()
+    {
+        var client = ClientForLearner(Guid.NewGuid());
+        var lesson = await GetGreetings(client);
+        await client.PostAsJsonAsync($"/lessons/{LearningSeedIds.GreetingsLesson}/attempts",
+            GreetingsAnswers(LearningSeedIds.GreetingsEx1Correct, LearningSeedIds.GreetingsEx2Correct, lesson));
+
+        var map = await client.GetFromJsonAsync<CourseMapView>($"/me/courses/{LearningSeedIds.SpanishCourse}/map");
+
+        var basics = map!.Units[0];
+        Assert.Equal("Completed", basics.Lessons[0].Status);
+        Assert.Equal("Unlocked", basics.Lessons[1].Status);
+    }
+
+    [Fact]
+    public async Task Unknown_course_map_returns_404()
+    {
+        var resp = await ClientForLearner(Guid.NewGuid())
+            .GetAsync($"/me/courses/{Guid.NewGuid()}/map");
+
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
 }
