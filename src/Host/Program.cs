@@ -71,6 +71,13 @@ app.MapPost("/lessons/{lessonId:guid}/attempts",
         }
     });
 
+app.MapGet("/me/courses/{courseId:guid}/map",
+    async (Guid courseId, ICurrentUser user, IMediator mediator, CancellationToken ct) =>
+    {
+        var dto = await mediator.SendAsync(new GetCourseMap(courseId, user.LearnerId), ct);
+        return dto is null ? Results.NotFound() : Results.Ok(dto);
+    });
+
 app.MapGet("/me/xp",
     async (ICurrentUser user, IMediator mediator, CancellationToken ct) =>
     {
