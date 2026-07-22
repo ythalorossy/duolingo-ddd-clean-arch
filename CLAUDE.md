@@ -181,7 +181,16 @@ implementation**. Each sub-project gets its own branch (`feat/<name>`) and PR.
   key** (server-authoritative). Two migrations (`AddExercises`, `AddAttempts`); the old asserted
   `POST /complete` + `CompleteLesson` were removed. Grading deliberately kept on `Lesson.Grade` (extract to a
   `GradingService` only when a rule spans beyond one lesson's data).
-- ⏭️ **Next:** **Learning Slice 3** (per-learner progress / mastery / unlocking — the 2D-map node
-  reachability — plus the completion economy: once-per-lesson credit, reduced XP on repeat, dedup) → real
-  Identity (and a real freeze economy when Billing exists); a subscriber for the `Promoted`/`Demoted` events.
-  Small deferred follow-ups: bound the `Outcome` column on the next migration; draft-lesson visibility.
+- ✅ **Sub-project 5 — Learning, Slice 3a (progress & unlocking)** (PR #9): a per-learner **course map**
+  (`GET /me/courses/{id}/map`) classifying every published lesson node **Completed / Unlocked / Locked**,
+  derived **read-only** from `Attempt` history — no new aggregate, no write path, no migration. The unlock
+  rule (**Rule A** — linear-within-unit, sequential units, unit-gated) lives in `Learning.Domain` as the pure
+  `LessonProgression` policy; drafts never appear as nodes or gate progression (closes the Slice-2
+  draft-lesson-visibility follow-up); only *passing* attempts complete a lesson; out-of-order passes don't
+  leak unlocks; an all-draft/empty unit is vacuously complete. Deferred: `LearnerProgress` aggregate +
+  **mastery** and the **completion economy** (once-per-lesson credit, reduced XP on repeat, dedup) → **Slice
+  4**; unlock *enforcement* on the attempt endpoint.
+- ⏭️ **Next:** **Learning Slice 4** (the completion economy: once-per-lesson credit, reduced XP on repeat,
+  dedup — cross-module, reads the Slice-3a progression projection) → real Identity (and a real freeze economy
+  when Billing exists); a subscriber for the `Promoted`/`Demoted` events. Small deferred follow-ups: bound the
+  `Outcome` column on the next migration.
