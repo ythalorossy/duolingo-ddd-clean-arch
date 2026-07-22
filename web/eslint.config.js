@@ -58,7 +58,23 @@ module.exports = defineConfig([
       // resolves .js/.json/.node by default, so extension-less relative
       // imports of .ts files go unresolved and the boundaries rule silently
       // skips them. Widen its extensions so it also finds .ts/.tsx targets.
+      //
+      // Neither resolver understands the TS path aliases (@duolingo/contracts,
+      // @duolingo/learning) defined in tsconfig.json's `paths` — without a
+      // resolver that reads tsconfig, boundaries can't map an alias import to
+      // a real file and silently skips it (imports via aliases went
+      // unchecked). The typescript resolver reads `paths` from these
+      // tsconfig files so alias imports resolve to their real module and get
+      // policed like any other import.
       'import/resolver': {
+        typescript: {
+          project: [
+            'tsconfig.json',
+            'projects/contracts/tsconfig.lib.json',
+            'projects/learning/tsconfig.lib.json',
+            'projects/shell/tsconfig.app.json',
+          ],
+        },
         node: {
           extensions: ['.js', '.jsx', '.ts', '.tsx'],
         },
