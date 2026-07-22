@@ -12,6 +12,12 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HeaderCurrentUser>();
 builder.Services.AddOpenApi();
 
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? Array.Empty<string>();
+builder.Services.AddCors(options =>
+    options.AddPolicy("spa", policy =>
+        policy.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod()));
+
 builder.Services.AddMediator(
     typeof(GetXpAccount).Assembly,        // Engagement.Application handlers
     typeof(SubmitAttempt).Assembly);      // Learning.Application handlers
@@ -34,6 +40,8 @@ if (builder.Configuration.GetValue("Leagues:Settlement:Enabled", true))
     builder.Services.AddHostedService<LeagueSettlementScheduler>();
 
 var app = builder.Build();
+
+app.UseCors("spa");
 
 app.MapOpenApi(); // serves /openapi/v1.json
 
