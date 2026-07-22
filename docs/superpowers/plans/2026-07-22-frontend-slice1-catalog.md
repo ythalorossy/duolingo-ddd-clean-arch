@@ -520,6 +520,20 @@ describe('mapCatalog', () => {
   it('returns an empty array for an empty catalog', () => {
     expect(mapCatalog({ courses: [] })).toEqual([]);
   });
+
+  it('coerces a numeric-string position from the wire into a domain number', () => {
+    // The wire type allows position as a numeric string (.NET 10 OpenAPI int -> ["integer","string"]).
+    const wireWithStringPosition: CatalogDto = {
+      courses: [{ id: 'c1', title: 'Spanish', language: 'es', units: [
+        { id: 'u1', title: 'Basics', position: '3', lessons: [
+          { id: 'l1', title: 'Greetings', position: '7', isPublished: true },
+        ] },
+      ] }],
+    };
+    const [course] = mapCatalog(wireWithStringPosition);
+    expect(course.units[0].position).toBe(3);
+    expect(course.units[0].lessons[0].position).toBe(7);
+  });
 });
 ```
 
@@ -577,13 +591,15 @@ function mapCourse(dto: CourseDto): Course {
 }
 
 function mapUnit(dto: UnitDto): Unit {
-  return { id: dto.id, title: dto.title, position: dto.position, lessons: dto.lessons.map(mapLesson) };
+  return { id: dto.id, title: dto.title, position: Number(dto.position), lessons: dto.lessons.map(mapLesson) };
 }
 
 function mapLesson(dto: LessonDto): Lesson {
-  return { id: dto.id, title: dto.title, position: dto.position, isLocked: !dto.isPublished };
+  return { id: dto.id, title: dto.title, position: Number(dto.position), isLocked: !dto.isPublished };
 }
 ```
+
+> **Why `Number(dto.position)`:** the generated DTO types `position` as `number | string`. That's the real contract — .NET 10's built-in OpenAPI describes an `int` in OpenAPI 3.1 as `type: ["integer","string"]` (a JSON number *or* a numeric string), and `openapi-typescript` reflects that union. Normalizing that wire quirk into a clean domain `number` is exactly the anti-corruption layer's job; the domain model stays `position: number` and never sees the union.
 
 - [ ] **Step 5: Run the test to verify it passes**
 
