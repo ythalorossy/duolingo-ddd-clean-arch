@@ -1,59 +1,65 @@
-# Web
+# Duolingo Web (Angular)
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.19.
+Frontend for the Duolingo DDD / Clean-Architecture learning project — built as a **second
+learning vehicle** where the backend's bounded-context boundaries are re-expressed in Angular.
 
-## Development server
+Multi-project Angular workspace (Angular 21, standalone, signals, zoneless):
 
-To start a local development server, run:
-
-```bash
-ng serve
+```
+projects/
+  shell/       application — routing, layout, composition root (providers)
+  contracts/   library — generated DTO types (≈ BuildingBlocks/Contracts)
+  learning/    library — the Learning bounded context, layered ui → application → data → domain
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Boundaries are enforced two ways (the frontend analogue of the backend's project references +
+NetArchTest): each library's `public-api.ts` is the only external surface, and
+`eslint-plugin-boundaries` fails `ng lint` on a disallowed import (e.g. `ui → data`, or a context
+importing a sibling).
 
-## Code scaffolding
+## Prerequisites
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+- Node.js `^22.12` (developed on v22.22.2) and npm.
+- The backend Host (this repo's `src/Host`) for live data.
+- From this folder: `npm install`.
 
-```bash
-ng generate component component-name
-```
+## Run
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+1. **Backend** — from the repo root: `dotnet run --project src/Host` (listens on `http://localhost:5225`).
+2. **Frontend** — from `web/`: `npx ng serve shell` → open `http://localhost:4200`.
 
-```bash
-ng generate --help
-```
+The catalog page loads `GET /courses` and renders Course → Unit → Lesson, with loading / error /
+empty states. CORS for `http://localhost:4200` is configured on the Host.
 
-## Building
+## Regenerate the API contract types
 
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+The DTO types in `projects/contracts/src/generated/` are generated from the Host's OpenAPI document
+(`openapi-typescript`) and committed. After a backend contract change, refresh them:
 
 ```bash
-ng test
+# 1. run the Host, then snapshot its OpenAPI document into this folder:
+curl -s http://localhost:5225/openapi/v1.json -o openapi.json
+# 2. regenerate the DTO types from the snapshot:
+npm run generate:contracts
 ```
 
-## Running end-to-end tests
+Commit the updated `openapi.json` and generated types. Never hand-edit the generated file; the
+friendly aliases live in `projects/contracts/src/public-api.ts`.
 
-For end-to-end (e2e) testing, run:
+## Quality gate
 
 ```bash
-ng e2e
+npx ng test contracts --no-watch \
+  && npx ng test learning --no-watch \
+  && npx ng test shell --no-watch \
+  && npm run lint \
+  && npx ng build shell
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+Unit tests run on **Vitest** (via the `@angular/build:unit-test` builder). Browser-driven
+end-to-end tests (Playwright) are planned for Slice 2 (the first write flow).
 
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+> Note: `ng build shell` (the application) is the build gate. A standalone `ng build learning`
+> currently fails a `rootDir` check because libraries are consumed from source via TS path aliases
+> in this single workspace — that's a known, deferred trade-off; nothing in Slice 1 builds a library
+> on its own.
