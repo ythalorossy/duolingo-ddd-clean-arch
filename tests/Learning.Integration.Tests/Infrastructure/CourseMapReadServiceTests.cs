@@ -85,6 +85,26 @@ public class CourseMapReadServiceTests
     }
 
     [Fact]
+    public async Task Duplicate_passing_attempts_for_the_same_lesson_still_collapse_to_one_completed_node()
+    {
+        var learner = Guid.NewGuid();
+        await using (var seed = NewContext())
+        {
+            seed.Attempts.Add(SeededAttempt(learner, LearningSeedIds.GreetingsLesson, new Score(2, 2), Outcome.Passed));
+            seed.Attempts.Add(SeededAttempt(learner, LearningSeedIds.GreetingsLesson, new Score(2, 2), Outcome.Passed));
+            await seed.SaveChangesAsync();
+        }
+
+        await using var ctx = NewContext();
+        var map = await new CourseMapReadService(ctx)
+            .GetCourseMapAsync(LearningSeedIds.SpanishCourse, learner, CancellationToken.None);
+
+        var basics = map!.Units[0];
+        Assert.Equal("Completed", basics.Lessons[0].Status); // Greetings — deduped, not an error
+        Assert.Equal("Unlocked", basics.Lessons[1].Status);  // ser is still the only frontier
+    }
+
+    [Fact]
     public async Task Unknown_course_returns_null()
     {
         await using var ctx = NewContext();

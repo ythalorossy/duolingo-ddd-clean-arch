@@ -84,7 +84,7 @@ A **published** lesson node is exactly one of:
 - **`LessonProgression`** — a **pure, framework-free domain policy** encoding Rule A:
   `Classify(orderedUnits, publishedLessons, passedLessonIds) → IReadOnlyDictionary<LessonId, NodeStatus>`.
   This is the slice's center of gravity and its richest unit-test target.
-- **`GetCourseMap(CourseId, LearnerId)`** query + handler (throws `KeyNotFoundException` on unknown course).
+- **`GetCourseMap(CourseId, LearnerId)`** query + handler (returns `null` on unknown course).
 - **DTOs:** `CourseMapDto(CourseId, Title, Units)` → `UnitMapDto(Id, Title, Position, Lessons)` →
   `LessonNodeDto(Id, Title, Position, string Status)`. Status is a **string** on the wire
   (`"Completed"|"Unlocked"|"Locked"`) so the contract doesn't bind to the enum's ordering.
@@ -93,7 +93,8 @@ A **published** lesson node is exactly one of:
   assembly, mirroring `CatalogReadService`), call the domain policy, build the DTO; return `null` on unknown
   course.
 - **Host:** `GET /me/courses/{courseId:guid}/map` → `ICurrentUser.LearnerId` + `GetCourseMap`;
-  `catch (KeyNotFoundException)` → **404**.
+  `dto is null` → **404** (the nullable-DTO read convention, matching the existing `GetLesson` endpoint —
+  not an exception; see decision 6 below).
 
 ### Out of scope (deferred)
 - **`LearnerProgress` aggregate / any new write state or migration.** The completed set already lives in
@@ -148,7 +149,10 @@ per-course catalog shape, rather than a single global `GET /me/progress`. `Statu
 `CourseMapReadService` (Infrastructure) calls `LessonProgression.Classify` directly. This respects the
 Dependency Rule — Infrastructure → Domain is inward — and keeps the read path a single cohesive
 fetch → classify → assemble unit, exactly as `CatalogReadService` already assembles a DTO in one place. The
-handler stays thin (delegate + translate `null` → `KeyNotFoundException`).
+handler stays thin (a pass-through delegate); `null` propagates all the way to the Host endpoint, which maps
+it to **404** — the **nullable-DTO read convention** already established by `GetLesson`, adopted here
+instead of this doc's original `KeyNotFoundException` sketch (settled in the implementation plan, since it
+avoids exceptions-as-control-flow and keeps every Learning read endpoint consistent).
 
 ## The core model
 
@@ -186,7 +190,7 @@ flowchart TB
       RS -->|Classify structure, passedSet| POL["LessonProgression (domain · pure)"]
       POL --> STAT["status per LessonId"]
       RS -->|assemble| DTO["CourseMapDto (units -> nodes + status)"]
-      H -->|null -> KeyNotFoundException| NF["404"]
+      H -->|null| NF["404"]
     end
     Host["ICurrentUser.LearnerId"] --> EP
 ```
@@ -206,8 +210,8 @@ No integration events, no cross-module calls, no writes.
   only), out-of-order pass, vacuous-empty-unit. References nothing infrastructural.
 
 ### Application (`Learning.Application`)
-- **`GetCourseMap(Guid CourseId, Guid LearnerId) : IRequest<CourseMapDto>`** + **`GetCourseMapHandler`**
-  (calls the read service; `null` → `KeyNotFoundException`).
+- **`GetCourseMap(Guid CourseId, Guid LearnerId) : IRequest<CourseMapDto?>`** + **`GetCourseMapHandler`**
+  (a thin pass-through to the read service; `null` propagates to the Host, which maps it to 404).
 - **DTOs:** `CourseMapDto(Guid CourseId, string Title, IReadOnlyList<UnitMapDto> Units)`;
   `UnitMapDto(Guid Id, string Title, int Position, IReadOnlyList<LessonNodeDto> Lessons)`;
   `LessonNodeDto(Guid Id, string Title, int Position, string Status)`.
@@ -222,7 +226,7 @@ No integration events, no cross-module calls, no writes.
 
 ### Host
 - **`GET /me/courses/{courseId:guid}/map`** → `new GetCourseMap(courseId, currentUser.LearnerId)`;
-  `catch (KeyNotFoundException)` → **404**; else **200** with `CourseMapDto`.
+  `dto is null` → **404**; else **200** with `CourseMapDto`.
 
 ### Removed / changed
 - **Nothing removed.** `POST /lessons/{id}/attempts`, `GET /lessons/{id}`, `GET /courses`, and every
@@ -233,7 +237,7 @@ No integration events, no cross-module calls, no writes.
 | Case | Where decided | Response |
 |---|---|---|
 | Known course, any learner | read service returns a DTO | **200** `CourseMapDto` |
-| Unknown course id | read service returns `null` → handler throws `KeyNotFoundException` | **404** |
+| Unknown course id | read service returns `null` → Host maps `null` to 404 | **404** |
 | Learner with no attempts | passed set empty → first published lesson Unlocked, rest Locked | **200** |
 | Draft lesson | excluded from nodes and from gating | not shown |
 | Failing-only attempts on a lesson | not in passed set → lesson not Completed | **200** |
