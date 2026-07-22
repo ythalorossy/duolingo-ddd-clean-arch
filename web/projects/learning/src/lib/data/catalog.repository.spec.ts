@@ -1,8 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpClient, provideHttpClient } from '@angular/common/http';
+import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { CatalogRepository } from './catalog.repository';
 import { API_BASE_URL } from './api-base-url.token';
+import { Course } from '../domain/course';
 
 describe('CatalogRepository', () => {
   let repo: CatalogRepository;
@@ -24,7 +25,7 @@ describe('CatalogRepository', () => {
   afterEach(() => http.verify());
 
   it('GETs /courses and maps to domain courses', () => {
-    let result: unknown;
+    let result: Course[] | undefined;
     repo.getCatalog().subscribe((c) => (result = c));
 
     const req = http.expectOne('http://test.local/courses');
@@ -35,17 +36,17 @@ describe('CatalogRepository', () => {
           lessons: [{ id: 'l1', title: 'Greetings', position: 1, isPublished: true }] }] }],
     });
 
-    expect((result as any)[0].units[0].lessons[0].isLocked).toBe(false);
+    expect(result![0].units[0].lessons[0].isLocked).toBe(false);
   });
 
   it('translates an HTTP error into a domain-friendly error', () => {
-    let error: Error | undefined;
-    repo.getCatalog().subscribe({ error: (e) => (error = e) });
+    let caught: Error | undefined;
+    repo.getCatalog().subscribe({ error: (e: unknown) => (caught = e as Error) });
 
     http.expectOne('http://test.local/courses').flush('boom',
       { status: 500, statusText: 'Server Error' });
 
-    expect(error).toBeInstanceOf(Error);
-    expect(error!.message).toBe('Unable to load the catalog.');
+    expect(caught).toBeInstanceOf(Error);
+    expect(caught!.message).toBe('Unable to load the catalog.');
   });
 });
