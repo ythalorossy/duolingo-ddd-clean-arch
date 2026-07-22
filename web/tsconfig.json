@@ -3,6 +3,10 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
+    "paths": {
+      "@duolingo/contracts": ["./projects/contracts/src/public-api.ts"],
+      "@duolingo/learning": ["./projects/learning/src/public-api.ts"]
+    },
     "strict": true,
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
@@ -21,5 +25,25 @@
     "strictInputAccessModifiers": true,
     "strictTemplates": true
   },
-  "files": []
+  "files": [],
+  "references": [
+    {
+      "path": "./projects/shell/tsconfig.app.json"
+    },
+    {
+      "path": "./projects/shell/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/contracts/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/contracts/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/learning/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/learning/tsconfig.spec.json"
+    }
+  ]
 }
