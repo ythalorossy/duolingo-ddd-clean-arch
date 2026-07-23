@@ -4,6 +4,7 @@ using Engagement.Infrastructure;
 using Host;
 using Learning.Application;
 using Learning.Infrastructure;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,6 +45,10 @@ var app = builder.Build();
 app.UseCors("spa");
 
 app.MapOpenApi(); // serves /openapi/v1.json
+
+// Interactive API reference (dev only) at /scalar/v1, rendered from the OpenAPI document above.
+if (app.Environment.IsDevelopment())
+    app.MapScalarApiReference();
 
 // --- Endpoints ---
 app.MapGet("/courses",
