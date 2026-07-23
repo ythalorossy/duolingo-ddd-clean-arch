@@ -6,7 +6,7 @@
 
 **Architecture:** A multi-project Angular workspace (`shell` app + `contracts` + `learning` libraries) mirrors the backend's Clean-Architecture/DDD layout. Each library exposes only its `public-api.ts` (structural boundary ≈ project references); ESLint boundary rules enforce cross-context and intra-layer dependency rules (≈ NetArchTest). The `learning` library is layered `ui → application → data → domain`; generated DTOs live in `contracts` and are hand-mapped to a `learning` domain model in the `data` layer.
 
-**Tech Stack:** Angular (latest stable, ≥20 — standalone components, signals, `inject()`, new control flow), TypeScript (strict), ESLint + `eslint-plugin-boundaries`, `openapi-typescript` (types-only codegen), Karma/Jasmine (Angular default runner). Backend: .NET 10, ASP.NET Core Minimal APIs, `Microsoft.AspNetCore.OpenApi` (built-in), xUnit + `WebApplicationFactory`.
+**Tech Stack:** Angular 21 (standalone components, signals, `inject()`, new control flow, zoneless by default), TypeScript (strict), ESLint + `eslint-plugin-boundaries`, `openapi-typescript` (types-only codegen), **Vitest** via the `@angular/build:unit-test` builder (globals enabled). Backend: .NET 10, ASP.NET Core Minimal APIs, `Microsoft.AspNetCore.OpenApi` (built-in), xUnit + `WebApplicationFactory`.
 
 ## Global Constraints
 
@@ -15,6 +15,11 @@
 - **Type generator:** `openapi-typescript` (types only, zero runtime). Refines the spec's "DTO types only" — no client services are generated. `contracts` stays a pure-types library.
 - **Frontend location:** everything frontend lives under `web/`. Never add frontend files outside `web/`.
 - **Angular idioms (assumed, non-negotiable):** standalone components only (no NgModules), signals for state, `inject()` over constructor DI in stores/services, new control flow (`@if`/`@for`), `input()`/`output()` for dumb components.
+- **⚠️ Angular-21 environment (CONFIRMED at scaffold time — supersedes any earlier "Karma/Jasmine" wording in this plan):**
+  - **Toolchain pinned to Angular 21** (CLI 21.2.x). Always run the CLI as `npx ng …` from inside `web/` (local v21). `@angular/cli@latest` (v22) is blocked on this machine's Node.
+  - **Test runner is Vitest** via the `@angular/build:unit-test` builder, with **globals enabled** (`tsconfig.spec.json` has `"types": ["vitest/globals"]`). Therefore in `*.spec.ts`: `describe`, `it`, `expect`, `beforeEach`, `afterEach`, and **`vi`** are **global — do NOT import them**. Use **`vi.fn()`** for spies (NOT `jasmine.createSpy`). Run tests with `npx ng test <project> --no-watch` (Vitest flag; `--watch=false` also accepted).
+  - **Zoneless by default.** `app.config.ts` was generated with the zoneless change-detection provider — **keep generated providers and MERGE** new ones in; never replace the providers array wholesale. In component tests drive change detection explicitly with `fixture.detectChanges()` / `await fixture.whenStable()` (no zone.js).
+  - **Generated file names (Angular-21 style, no `.component.`/`Component` suffix):** shell root component is `projects/shell/src/app/app.ts` (class **`App`**), with `app.config.ts`, `app.routes.ts` (exports `routes`), `app.html` (separate template). Default library entries are `projects/contracts/src/lib/contracts.ts` (class `Contracts`) + `contracts.spec.ts`, and `projects/learning/src/lib/learning.ts` (class `Learning`) + `learning.spec.ts`; each `public-api.ts` re-exports `./lib/<name>`. **No service files were generated.** Hand-authored files in later tasks may keep the plan's chosen names/paths (e.g. `catalog-page.component.ts`, class `CatalogPageComponent`) — that's fine; only the *generated* files follow the new convention.
 - **Dependency rule (enforced by ESLint):** inside a library, imports point inward `ui → application → data → domain`; `domain` imports nothing from sibling layers; `ui` never imports `data`. Across libraries, contexts meet only through `@duolingo/contracts`; nothing imports `shell`.
 - **Generated code:** committed to git, never hand-edited, regenerated via `npm run generate:contracts`.
 - **"Now"/time & auth:** slice 1 is anonymous read-only — do NOT add `X-Learner-Id`, interceptors, or auth. Those are Slice 2.
@@ -148,22 +153,25 @@ git commit -m "feat(host): serve OpenAPI document and declare /courses response 
 - Test: `tests/Learning.Integration.Tests/EndToEnd/OpenApiAndCorsTests.cs` (add a test)
 
 **Interfaces:**
-- Consumes: `Cors:AllowedOrigins` config array; existing `/courses` endpoint.
-- Produces: a named CORS policy `"spa"` applied app-wide; a preflight/`Access-Control-Allow-Origin` header on cross-origin requests to `/courses`.
+- Consumes: `Cors:AllowedOrigins` config array; the DB-free `OpenApiApiFactory` created in Task 1 (the test class's fixture).
+- Produces: a named CORS policy `"spa"` applied app-wide (`app.UseCors("spa")`); an `Access-Control-Allow-Origin` header echoed on any cross-origin GET from the configured origin.
 
-- [ ] **Step 1: Write the failing test**
+> **Adapted from the original plan (Task 1 deviation).** Task 1's `OpenApiAndCorsTests` uses a **DB-free** `OpenApiApiFactory` (it added a dedicated factory to avoid a parallel-DB race). So this CORS test must NOT probe `/courses` (that would need the DB and 500 under the DB-free factory). Instead it probes the DB-free **`/openapi/v1.json`** endpoint with an `Origin` header — CORS is applied app-wide via `app.UseCors("spa")`, so the header is emitted on *any* endpoint's response, and this keeps the whole test class DB-free. This tests the real (non-preflight) cross-origin GET path.
 
-Add to `tests/Learning.Integration.Tests/EndToEnd/OpenApiAndCorsTests.cs`:
+- [ ] **Step 1: Write the failing test + tidy usings**
+
+In `tests/Learning.Integration.Tests/EndToEnd/OpenApiAndCorsTests.cs`, **remove the unused `using System.Net.Http.Json;`** (neither test needs it) and ensure the remaining usings are `System.Net;`, `System.Text.Json;`, `Xunit;`. Then add this test method to the `OpenApiAndCorsTests` class:
 
 ```csharp
     [Fact]
-    public async Task Courses_allows_the_configured_spa_origin()
+    public async Task Cross_origin_get_from_the_spa_origin_echoes_allow_origin_header()
     {
         var client = factory.CreateClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/courses");
-        request.Headers.Add("Origin", "http://localhost:4200");
+        client.DefaultRequestHeaders.Add("Origin", "http://localhost:4200");
 
-        var response = await client.SendAsync(request);
+        // Probe the DB-free OpenAPI endpoint; the "spa" policy is applied app-wide,
+        // so the CORS header appears on any endpoint's response without needing the DB.
+        var response = await client.GetAsync("/openapi/v1.json");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(response.Headers.Contains("Access-Control-Allow-Origin"),
@@ -441,7 +449,7 @@ export type UnitDto = components['schemas']['UnitDto'];
 export type LessonDto = components['schemas']['LessonDto'];
 ```
 
-If `ng generate library` created `lib/` component/service files and referenced them from `public-api.ts`, delete those generated `contracts` component/service files — `contracts` is a pure-types library.
+The generated library created `projects/contracts/src/lib/contracts.ts` (class `Contracts`) and `contracts.spec.ts`, with `public-api.ts` re-exporting `./lib/contracts`. **Delete both `lib/contracts.ts` and `lib/contracts.spec.ts`** (the `public-api.ts` replacement above no longer references them) — `contracts` is a pure-types library with no component. Run `npx ng test contracts --no-watch` to confirm only the type test remains and it passes.
 
 - [ ] **Step 6: Run the test to verify it passes**
 
@@ -512,6 +520,20 @@ describe('mapCatalog', () => {
   it('returns an empty array for an empty catalog', () => {
     expect(mapCatalog({ courses: [] })).toEqual([]);
   });
+
+  it('coerces a numeric-string position from the wire into a domain number', () => {
+    // The wire type allows position as a numeric string (.NET 10 OpenAPI int -> ["integer","string"]).
+    const wireWithStringPosition: CatalogDto = {
+      courses: [{ id: 'c1', title: 'Spanish', language: 'es', units: [
+        { id: 'u1', title: 'Basics', position: '3', lessons: [
+          { id: 'l1', title: 'Greetings', position: '7', isPublished: true },
+        ] },
+      ] }],
+    };
+    const [course] = mapCatalog(wireWithStringPosition);
+    expect(course.units[0].position).toBe(3);
+    expect(course.units[0].lessons[0].position).toBe(7);
+  });
 });
 ```
 
@@ -569,13 +591,15 @@ function mapCourse(dto: CourseDto): Course {
 }
 
 function mapUnit(dto: UnitDto): Unit {
-  return { id: dto.id, title: dto.title, position: dto.position, lessons: dto.lessons.map(mapLesson) };
+  return { id: dto.id, title: dto.title, position: Number(dto.position), lessons: dto.lessons.map(mapLesson) };
 }
 
 function mapLesson(dto: LessonDto): Lesson {
-  return { id: dto.id, title: dto.title, position: dto.position, isLocked: !dto.isPublished };
+  return { id: dto.id, title: dto.title, position: Number(dto.position), isLocked: !dto.isPublished };
 }
 ```
+
+> **Why `Number(dto.position)`:** the generated DTO types `position` as `number | string`. That's the real contract — .NET 10's built-in OpenAPI describes an `int` in OpenAPI 3.1 as `type: ["integer","string"]` (a JSON number *or* a numeric string), and `openapi-typescript` reflects that union. Normalizing that wire quirk into a clean domain `number` is exactly the anti-corruption layer's job; the domain model stays `position: number` and never sees the union.
 
 - [ ] **Step 5: Run the test to verify it passes**
 
@@ -940,7 +964,7 @@ class FakeStore {
   loading = signal(false);
   error = signal<string | null>(null);
   lessonCount = signal(0);
-  load = jasmine.createSpy('load');
+  load = vi.fn();
 }
 
 describe('CatalogPageComponent', () => {
@@ -1040,7 +1064,7 @@ Replace `web/projects/learning/src/public-api.ts` with (the library's ONLY exter
 export { LEARNING_ROUTES } from './lib/learning.routes';
 ```
 
-Delete any default component/service files `ng generate library` created (e.g. `learning.component.*`, `learning.service.*`) and remove their exports if present.
+Delete the default library files `projects/learning/src/lib/learning.ts` (class `Learning`) and `learning.spec.ts` that `ng generate library` created — the `public-api.ts` above replaces the default `export * from './lib/learning'`, so nothing references them anymore.
 
 - [ ] **Step 9: Run all learning tests to verify they pass**
 
@@ -1062,7 +1086,7 @@ git commit -m "feat(web): catalog page + course tree UI with tri-state rendering
 **Files:**
 - Modify: `web/projects/shell/src/app/app.config.ts`
 - Modify: `web/projects/shell/src/app/app.routes.ts`
-- Modify: `web/projects/shell/src/app/app.component.ts` (or `app.ts` root component)
+- Modify: `web/projects/shell/src/app/app.ts` (root component, class `App`) and `app.html` (its template)
 - Modify: `web/projects/shell/src/environments/environment*.ts` (create if absent)
 - Test: `web/projects/shell/src/app/app.routes.spec.ts`
 
@@ -1097,28 +1121,26 @@ export const environment = { apiBaseUrl: 'http://localhost:5225' };
 
 (If Angular's `ng generate application` did not create an `environments/` folder, this is expected in newer CLIs — creating them here is correct. No `fileReplacements` change is needed since both point at the dev API for slice 1.)
 
-- [ ] **Step 3: Configure providers**
+- [ ] **Step 3: Configure providers (MERGE — do not replace)**
 
-Set `web/projects/shell/src/app/app.config.ts` to:
+The Angular-21 generated `web/projects/shell/src/app/app.config.ts` already contains a providers array (with the zoneless change-detection provider, a global error-listener provider, and `provideRouter(routes)`). **Keep all of those.** Only ADD two providers — `provideHttpClient()` and the `API_BASE_URL` value — and the imports they need. The result should look like this (preserve whatever generated providers/imports were already present; the two new lines are `provideHttpClient()` and the `API_BASE_URL` entry):
 
 ```typescript
-import { ApplicationConfig, provideZonelessChangeDetection } from '@angular/core';
-import { provideRouter } from '@angular/router';
+// ...existing generated imports stay...
 import { provideHttpClient } from '@angular/common/http';
 import { API_BASE_URL } from '@duolingo/learning';
 import { environment } from '../environments/environment';
-import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideRouter(routes),
+    // ...existing generated providers stay (zoneless change detection, error listeners, provideRouter(routes))...
     provideHttpClient(),
     { provide: API_BASE_URL, useValue: environment.apiBaseUrl },
   ],
 };
 ```
 
-If the generated app uses zone.js (has `provideZoneChangeDetection`), keep that line instead of `provideZonelessChangeDetection` — match whatever `ng new` scaffolded. Do not remove an existing change-detection provider.
+Do NOT remove or swap the generated change-detection provider (the app is zoneless by default).
 
 - [ ] **Step 4: Write the failing routes test**
 
@@ -1156,14 +1178,14 @@ export const routes: Routes = [
 ];
 ```
 
-Ensure the root component template renders a `<router-outlet>`. In `web/projects/shell/src/app/app.component.ts` (or `app.ts`), set the template to:
+The generated root component is `web/projects/shell/src/app/app.ts` (class `App`) with its template in the separate file `app.html`. Make the root render only the router outlet:
 
-```typescript
-// keep the existing @Component decorator/class name from ng new; ensure imports + template are:
-// imports: [RouterOutlet], template: `<router-outlet />`
+1. In `app.ts`, ensure the component imports `RouterOutlet` from `@angular/router` (add it to the standalone `imports` array if not already there). Keep the class name `App` and the `templateUrl: './app.html'` reference.
+2. Replace the entire contents of `app.html` (which currently holds the "Hello, shell" starter markup) with a single line:
+
+```html
+<router-outlet />
 ```
-
-Concretely, edit the root component so it is standalone, imports `RouterOutlet` (from `@angular/router`), and its template is `<router-outlet />`. Remove the default Angular starter markup.
 
 - [ ] **Step 7: Run the test to verify it passes**
 
